@@ -83,7 +83,7 @@ mkdir -p "${outdir}"
 mkdir -p "${logdir}"
 
 echo "============================================="
-echo "Step 6: Structure Comparison with TMalign (workflow v${BIOM3_WORKFLOW_VERSION:-unknown})"
+echo "Step 6: Structure Comparison with TMalign (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "ColabFold CSV:   ${colabfold_csv}"
 echo "BLAST TSV:       ${blast_tsv}"

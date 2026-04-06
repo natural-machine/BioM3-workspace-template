@@ -56,7 +56,7 @@ prefix=$(basename "${input_csv}" .csv)
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 
 echo "============================================="
-echo "Step 1: Embedding (workflow v${BIOM3_WORKFLOW_VERSION:-unknown})"
+echo "Step 1: Embedding (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "Input CSV:  ${input_csv}"
 echo "Output dir: ${outdir}"

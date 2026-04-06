@@ -57,7 +57,7 @@ cd ${projdir}
 mkdir -p "${outdir}"
 
 echo "============================================="
-echo "Step 4: Structure Prediction with ColabFold (workflow v${BIOM3_WORKFLOW_VERSION:-unknown})"
+echo "Step 4: Structure Prediction with ColabFold (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "FASTA dir:  ${fasta_dir}"
 echo "Output dir: ${outdir}"

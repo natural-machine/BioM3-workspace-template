@@ -55,7 +55,7 @@ if [ ! -f "${config}" ]; then
 fi
 
 echo "============================================="
-echo "Step 8: BioM3 Web App (workflow v${BIOM3_WORKFLOW_VERSION:-unknown})"
+echo "Step 8: BioM3 Web App (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "Config:  ${config}"
 echo "URL:     http://localhost:${port:-8501}"

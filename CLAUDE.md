@@ -10,7 +10,7 @@ BioM3-workspace-template is a GitHub template repository for creating new BioM3 
 
 ## Versioning
 
-Version is defined in the `VERSION` file at the repo root (PEP 440 format, e.g. `0.0.1a1`). This is the single source of truth — read by `run_pipeline.py` and exported as `BIOM3_WORKFLOW_VERSION` by `environment.sh`. Cross-repo compatibility with BioM3-dev is tracked in `SYNC_LOG.md`.
+Version is defined in the `VERSION` file at the repo root (PEP 440 format, e.g. `0.0.1a1`). This is the single source of truth — read by `run_pipeline.py` and exported as `BIOM3_WORKSPACE_VERSION` by `environment.sh`. Cross-repo compatibility with BioM3-dev is tracked in `SYNC_LOG.md`.
 
 ## Ecosystem context
 

@@ -1,137 +1,61 @@
-# BioM3 Workspace Template
+# Project Name
 
-A GitHub template for creating new [BioM3](https://openreview.net/forum?id=L1MyyRCAjX) (NeurIPS 2024) research workspaces. Provides the standard directory structure, sync scripts, and configuration scaffolding used by the BioM3 finetuning and sequence generation pipeline — without demo-specific data, configs, or outputs.
+## About
 
-## BioM3 Ecosystem
+<!-- Describe your research project: protein family, goals, key findings. -->
 
-This template is part of a multi-repo ecosystem:
+## Setup
 
-| Repository | Role | Description |
-|------------|------|-------------|
-| [BioM3-dev](https://github.com/addison-nm/BioM3-dev) | Core library | Python package: 3-stage pipeline, dataset construction, training |
-| [BioM3-data-share](https://github.com/natural-machine/BioM3-data-share) | Shared data | Model weights, datasets, and reference databases synced across clusters |
-| [BioM3-workflow-demo](https://github.com/natural-machine/BioM3-workflow-demo) | Demo workflows | End-to-end finetuning and generation demonstration pipeline |
-| **BioM3-workspace-template** (this repo) | Workspace setup | Standardized workspace template for new research projects |
-
-See [docs/biom3_ecosystem.md](./docs/biom3_ecosystem.md) for cross-repo workflows, version compatibility, and shared data architecture.
-
-## Quick start
-
-### 1. Create your workspace
-
-Click **"Use this template"** on GitHub, or clone directly:
-
-```bash
-git clone https://github.com/natural-machine/BioM3-workspace-template.git my-workspace
-cd my-workspace
-```
-
-### 2. Install BioM3
+### Install BioM3
 
 ```bash
 conda create -n biom3-env python=3.12
 conda activate biom3-env
 python -m pip install torch==2.8 torchvision --index-url https://download.pytorch.org/whl/cu129
+python -m pip install -r requirements/<machine>.txt   # spark, polaris, or aurora
 python -m pip install git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a1
 ```
 
-### 3. Configure environment
-
-Edit `environment.sh` with your project-specific paths, then source it:
+Source the environment before running pipeline steps:
 
 ```bash
 source environment.sh
 ```
 
-### 4. Symlink weights from BioM3-data-share
+### Symlink weights
+
+Pretrained model weights are stored in [BioM3-data-share](https://github.com/natural-machine/BioM3-data-share). Symlink them into your workspace:
 
 ```bash
-# Preview what will be linked
-./scripts/sync_weights.sh <weights_source> weights --dry-run
-
-# Apply symlinks
 ./scripts/sync_weights.sh <weights_source> weights
 ```
 
-See the [shared data paths](#shared-data-paths) table below for the `<weights_source>` on your machine.
+| Machine | Weights path |
+|---------|-------------|
+| DGX Spark | `/data/data-share/BioM3-data-share/data/weights` |
+| Polaris (ALCF) | `/grand/NLDesignProtein/sharepoint/BioM3-data-share/data/weights` |
+| Aurora (ALCF) | `/flare/NLDesignProtein/sharepoint/BioM3-data-share/data/weights` |
 
-### 5. Add your data
+### Symlink databases (optional)
 
-Place your protein family datasets under `data/`:
-
-```
-data/
-  MyFamily/
-    MyFamily_dataset.csv
-```
-
-Input CSVs should contain at minimum:
-- `protein_sequence` — amino acid sequences
-- `primary_Accession` — unique identifier per entry
-- A text description column with natural language prompts
-
-### 6. Configure and run the pipeline
-
-Copy the pipeline template and edit for your protein family:
+For local BLAST searches, symlink reference databases:
 
 ```bash
-cp configs/pipelines/_template.toml configs/pipelines/MyFamily.toml
-# Edit MyFamily.toml: replace <FAMILY> placeholders, adjust settings
-python run_pipeline.py configs/pipelines/MyFamily.toml
+./scripts/sync_databases.sh <databases_source> data/databases
 ```
 
-See [BioM3-workflow-demo](https://github.com/natural-machine/BioM3-workflow-demo) for detailed documentation on each pipeline step.
+| Machine | Databases path |
+|---------|---------------|
+| DGX Spark | `/data/data-share/BioM3-data-share/databases` |
+| Polaris (ALCF) | `/grand/NLDesignProtein/sharepoint/BioM3-data-share/databases` |
+| Aurora (ALCF) | `/flare/NLDesignProtein/sharepoint/BioM3-data-share/databases` |
 
-## Prerequisites
+### Add your data
 
-- A working installation of [BioM3-dev](https://github.com/addison-nm/BioM3-dev)
-- Access to pretrained model weights via [BioM3-data-share](https://github.com/natural-machine/BioM3-data-share)
-- An NVIDIA GPU (tested on DGX Spark)
+Place input datasets under `data/<FamilyName>/`. CSVs should contain columns: `protein_sequence`, `primary_Accession`, and a text description column.
 
-## Directory structure
-
-```
-BioM3-workspace-template/
-├── configs/                # Pipeline and model configs (JSON, TOML)
-│   ├── inference/          # Stage 1-3 inference configs
-│   ├── stage3_training/    # Finetuning hyperparameters
-│   └── pipelines/          # Pipeline TOML configs (copy _template.toml)
-├── pipeline/               # Pipeline step scripts (01-08)
-├── scripts/                # Helper scripts (sync, setup utilities)
-├── requirements/           # Per-machine pip requirements
-├── data/                   # Input datasets, per family (gitignored)
-├── weights/                # Symlinked model weights (gitignored)
-├── outputs/                # Pipeline outputs, per family (gitignored)
-├── logs/                   # Training and pipeline logs (gitignored)
-├── docs/                   # Project documentation and session notes
-├── environment.sh          # Environment variables (source before running)
-├── run_pipeline.py         # Config-driven pipeline runner
-├── VERSION                 # Single-source version (PEP 440)
-└── SYNC_LOG.md             # BioM3-dev compatibility tracking
-```
-
-Directories listed as "gitignored" are created locally and not tracked by git. Weights are symlinked from the shared BioM3-data-share directory. Outputs and logs are generated by the pipeline.
-
-## Shared data paths
-
-Pretrained model weights and reference databases are stored in a shared `BioM3-data-share` directory on each machine:
-
-| Machine | Weights | Databases |
-|---------|---------|-----------|
-| DGX Spark | `/data/data-share/BioM3-data-share/data/weights` | `/data/data-share/BioM3-data-share/databases` |
-| Polaris (ALCF) | `/grand/NLDesignProtein/sharepoint/BioM3-data-share/data/weights` | `/grand/NLDesignProtein/sharepoint/BioM3-data-share/databases` |
-| Aurora (ALCF) | `/flare/NLDesignProtein/sharepoint/BioM3-data-share/data/weights` | `/flare/NLDesignProtein/sharepoint/BioM3-data-share/databases` |
-
-Use the sync scripts to create symlinks from these shared paths into your workspace:
-
-```bash
-# Weights (required)
-./scripts/sync_weights.sh /data/data-share/BioM3-data-share/data/weights weights
-
-# Databases (optional, for local BLAST)
-./scripts/sync_databases.sh /data/data-share/BioM3-data-share/databases data/databases
-```
+See [QUICKSTART.md](QUICKSTART.md) for detailed instructions on data format, pipeline configuration, and running the pipeline.
 
 ## References
 
-[1] Natural Language Prompts Guide the Design of Novel Functional Protein Sequences. Nikša Praljak, Hugh Yeh, Miranda Moore, Michael Socolich, Rama Ranganathan, Andrew L. Ferguson. bioRxiv 2024.11.11.622734; doi: [10.1101/2024.11.11.622734](https://doi.org/10.1101/2024.11.11.622734)
+[1] Natural Language Prompts Guide the Design of Novel Functional Protein Sequences. Niksa Praljak, Hugh Yeh, Miranda Moore, Michael Socolich, Rama Ranganathan, Andrew L. Ferguson. bioRxiv 2024.11.11.622734; doi: [10.1101/2024.11.11.622734](https://doi.org/10.1101/2024.11.11.622734)

@@ -111,7 +111,7 @@ if [ -z "${swissprot_dat}" ] && [ -z "${no_local_dat}" ] && [ -z "${alphafold_on
 fi
 
 echo "============================================="
-echo "Step 5b: Fetch Reference Structures (workflow v${BIOM3_WORKFLOW_VERSION:-unknown})"
+echo "Step 5b: Fetch Reference Structures (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "BLAST results: ${blast_tsv}"
 echo "Output dir:    ${outdir}"

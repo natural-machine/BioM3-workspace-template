@@ -50,7 +50,7 @@ cd ${projdir}
 mkdir -p "${outdir}"
 
 echo "============================================="
-echo "Step 7: Plot Structural Comparison Results (workflow v${BIOM3_WORKFLOW_VERSION:-unknown})"
+echo "Step 7: Plot Structural Comparison Results (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "Results CSV: ${results_csv}"
 echo "Output dir:  ${outdir}"

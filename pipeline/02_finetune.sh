@@ -86,7 +86,7 @@ run_id="finetune_e${epochs:-default}_V${datetime}"
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 
 echo "============================================="
-echo "Step 2: Finetune ProteoScribe (workflow v${BIOM3_WORKFLOW_VERSION:-unknown})"
+echo "Step 2: Finetune ProteoScribe (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "Config:         ${config_path}"
 echo "Training data:  ${hdf5_file}"

@@ -189,7 +189,7 @@ export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 mkdir -p ${embed_dir} ${outdir}
 
 echo "============================================="
-echo "Step 3: Generate Protein Sequences (workflow v${BIOM3_WORKFLOW_VERSION:-unknown})"
+echo "Step 3: Generate Protein Sequences (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "Model weights: ${model_weights}"
 echo "Input CSV:     ${input_csv}"

@@ -152,7 +152,7 @@ mkdir -p "${outdir}"
 results_fpath="${outdir}/blast_hit_results.tsv"
 
 echo "============================================="
-echo "Step 5: BLAST Homology Search (workflow v${BIOM3_WORKFLOW_VERSION:-unknown})"
+echo "Step 5: BLAST Homology Search (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "Query FASTA:  ${fasta_file}"
 echo "Output dir:   ${outdir}"
