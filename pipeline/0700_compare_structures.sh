@@ -1,18 +1,18 @@
 #!/bin/bash
 #=============================================================================
-# Step 6: Structure Comparison with TMalign
+# Step 700: Structure Comparison with TMalign
 #
-# Compares ColabFold-predicted structures (Step 4) against BLAST reference
-# structures (Step 5) using TMalign. Produces a CSV of structural similarity
+# Compares ColabFold-predicted structures (Step 5) against BLAST reference
+# structures (Step 6) using TMalign. Produces a CSV of structural similarity
 # metrics (TM-score, RMSD, sequence identity) for each query-reference pair.
 #
 # Requires TMalign to be installed and on PATH.
 #
 # USAGE:
-#   ./pipeline/07_compare_structures.sh <colabfold_csv> <blast_tsv> <structures_dir> <reference_dir> <output_dir>
+#   ./pipeline/0700_compare_structures.sh <colabfold_csv> <blast_tsv> <structures_dir> <reference_dir> <output_dir>
 #
 # EXAMPLE:
-#   ./pipeline/07_compare_structures.sh \
+#   ./pipeline/0700_compare_structures.sh \
 #       outputs/SH3/structures/colabfold_results.csv \
 #       outputs/SH3/blast/blast_hit_results.tsv \
 #       outputs/SH3/structures \
@@ -20,8 +20,8 @@
 #       outputs/SH3/comparison
 #
 # INPUT:
-#   <colabfold_csv>:  colabfold_results.csv from Step 4 (maps query IDs to PDB filenames)
-#   <blast_tsv>:      blast_hit_results.tsv from Step 5 (query-reference pairs)
+#   <colabfold_csv>:  colabfold_results.csv from Step 500 (maps query IDs to PDB filenames)
+#   <blast_tsv>:      blast_hit_results.tsv from Step 600 (query-reference pairs)
 #   <structures_dir>: directory containing ColabFold prompt_*/ subdirectories
 #   <reference_dir>:  directory containing downloaded reference PDB files
 #
@@ -83,7 +83,7 @@ mkdir -p "${outdir}"
 mkdir -p "${logdir}"
 
 echo "============================================="
-echo "Step 6: Structure Comparison with TMalign (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
+echo "Step 700: Structure Comparison with TMalign (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "ColabFold CSV:   ${colabfold_csv}"
 echo "BLAST TSV:       ${blast_tsv}"

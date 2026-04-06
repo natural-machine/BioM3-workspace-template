@@ -14,7 +14,7 @@ How to create a new research workspace from the BioM3 workspace template and run
 - [Pipeline overview](#pipeline-overview)
 - [Run the pipeline](#run-the-pipeline)
   - [Full pipeline](#full-pipeline)
-  - [Initial phase (embedding + finetuning)](#initial-phase-embedding--finetuning)
+  - [Initial phase (dataset + embedding + finetuning)](#initial-phase-dataset--embedding--finetuning)
   - [Analysis phase (structure prediction + evaluation)](#analysis-phase-structure-prediction--evaluation)
   - [Individual steps](#individual-steps)
 - [Output structure](#output-structure)
@@ -62,9 +62,9 @@ After creating your workspace, update the `README.md` with a description of your
 - Python 3.10+
 - An NVIDIA GPU with CUDA support (tested on DGX Spark)
 - Access to pretrained model weights via [BioM3-data-share](https://github.com/natural-machine/BioM3-data-share)
-- [ColabFold](https://github.com/sokrypton/ColabFold) (for Step 4, structure prediction)
-- [BLAST+](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html) (for Step 5, homology search)
-- [TMalign](https://zhanggroup.org/TM-align/) (for Step 6, structure comparison)
+- [ColabFold](https://github.com/sokrypton/ColabFold) (for Step 500, structure prediction)
+- [BLAST+](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html) (for Step 600, homology search)
+- [TMalign](https://zhanggroup.org/TM-align/) (for Step 700, structure comparison)
 
 ## Install BioM3
 
@@ -86,19 +86,19 @@ Machine-specific requirements files pin versions tested on each platform:
 | `requirements/polaris.txt` | Polaris (ALCF) |
 | `requirements/aurora.txt` | Aurora (ALCF) |
 
-For the web app (Step 8), install with app extras:
+For the web app (Step 900), install with app extras:
 
 ```bash
 python -m pip install "biom3[app] @ git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a1"
 ```
 
-Steps 4 and 5 require separate environments. Install them according to their respective documentation:
+Steps 500 and 600 require separate environments. Install them according to their respective documentation:
 
 | Environment | Used by | Install guide |
 |-------------|---------|---------------|
-| `biom3-env` | Steps 1-3, 6-8 | Above |
-| `colabfold` | Step 4 | [ColabFold](https://github.com/sokrypton/ColabFold) |
-| `blast-env` | Step 5 | [BLAST+](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html) |
+| `biom3-env` | Steps 100-400, 7-9 | Above |
+| `colabfold` | Step 500 | [ColabFold](https://github.com/sokrypton/ColabFold) |
+| `blast-env` | Step 600 | [BLAST+](https://blast.ncbi.nlm.nih.gov/doc/blast-help/downloadblastdata.html) |
 
 Source the environment file before running any pipeline steps:
 
@@ -147,8 +147,8 @@ Place input datasets in the `data` directory, for example under `data/datasets/<
 data/
   datasets/
     MyFamily/
-      MyFamily_dataset.csv      # raw finetuning data (Steps 1-2)
-      MyFamily_prompts.csv      # generation prompts (Step 3)
+      MyFamily_dataset.csv      # raw finetuning data (Steps 200-300)
+      MyFamily_prompts.csv      # generation prompts (Step 400)
 ```
 
 ### Required CSV columns
@@ -160,7 +160,7 @@ data/
 | `[final]text_caption` | Text description |
 | `pfam_label` | Pfam family identifier(s) (e.g. `PF00018`) |
 
-The training dataset (`_dataset.csv`) is used in Steps 1-2 to embed sequences and finetune the model. The prompts file (`_prompts.csv`) is used in Step 3 to condition sequence generation — it has the same column format.
+The training dataset (`_dataset.csv`) is used in Steps 200-300 to embed sequences and finetune the model. The prompts file (`_prompts.csv`) is used in Step 400 to condition sequence generation — it has the same column format.
 
 ### Example rows
 
@@ -190,17 +190,17 @@ The pipeline config has these sections:
 
 ```toml
 [pipeline]
-steps = [1, 2, 3, 4, 5, "5b", 6, 7]    # full pipeline
-# steps = [4, 5, "5b", 6, 7]            # analysis only (requires prior Step 3 output)
+steps = [100, 200, 300, 400, 500, 600, 610, 700, 800]    # full pipeline
+# steps = [500, 600, 610, 700, 800]              # analysis only (requires prior Step 400 output)
 ```
 
 #### `[environments]` — Conda/venv environment names
 
 ```toml
 [environments]
-biom3     = "biom3-env"       # Steps 1-3, 6-8
-colabfold = "colabfold"       # Step 4
-blast     = "blast-env"       # Step 5
+biom3     = "biom3-env"       # Steps 100-400, 7-9
+colabfold = "colabfold"       # Step 500
+blast     = "blast-env"       # Step 600
 ```
 
 #### `[paths]` — Input/output locations
@@ -216,13 +216,30 @@ epochs      = 50
 # model_weights = "outputs/MyFamily/finetuning/checkpoints/<run_id>/state_dict.best.pth"
 ```
 
-`input_csv` is used by Steps 1-2. `prompts_csv` is used by Step 3. All intermediate paths (HDF5, FASTA, results CSVs) are derived automatically from `output_dir` and the input file prefixes.
+`input_csv` is used by Steps 200-300. `prompts_csv` is used by Step 400. All intermediate paths (HDF5, FASTA, results CSVs) are derived automatically from `output_dir` and the input file prefixes.
 
-#### `[finetuning]` — Step 2 training config
+#### `[embedding]` — Step 200 options
+
+All optional. Override model weights, configs, batch size, or device for the embedding step:
+
+```toml
+[embedding]
+# pencl_weights      = "weights/PenCL/PenCL_V09152023_last.ckpt"
+# facilitator_weights = "weights/Facilitator/Facilitator_MMD15.ckpt/last.ckpt"
+# pencl_config       = "configs/inference/stage1_PenCL.json"
+# facilitator_config = "configs/inference/stage2_Facilitator.json"
+# batch_size         = 32
+# dataset_key        = "MMD_data"
+# device             = "cuda"
+# extra_args         = []      # arbitrary extra --key value pairs passed through
+```
+
+#### `[finetuning]` — Step 300 training config
 
 ```toml
 [finetuning]
 config = "configs/stage3_training/finetune.json"
+# device = "cuda"
 ```
 
 The JSON config controls all training hyperparameters: learning rate, batch size, epochs, precision, early stopping, etc. Key parameters in `finetune.json`:
@@ -230,7 +247,7 @@ The JSON config controls all training hyperparameters: learning rate, batch size
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `pretrained_weights` | `weights/ProteoScribe/ProteoScribe_epoch200.pth` | Base model to finetune |
-| `finetune_last_n_blocks` | 1 | Transformer blocks to unfreeze |
+| `finetune_last_n_blocks` | 100 | Transformer blocks to unfreeze |
 | `lr` | 1e-4 | Learning rate |
 | `epochs` | 20 | Max training epochs (overridden by TOML `paths.epochs`) |
 | `batch_size` | 32 | Training batch size |
@@ -238,19 +255,57 @@ The JSON config controls all training hyperparameters: learning rate, batch size
 | `valid_size` | 0.2 | Validation split fraction |
 | `early_stopping_patience` | 10 | Epochs before early stopping |
 
-#### `[generation]` — Step 3 sampling options
+#### `[generation]` — Step 400 sampling options
 
 ```toml
 [generation]
 unmasking_order = "random"              # random | confidence | confidence_no_pad
 token_strategy  = "sample"              # sample | argmax
+# pencl_weights      = "weights/PenCL/PenCL_V09152023_last.ckpt"
+# facilitator_weights = "weights/Facilitator/Facilitator_MMD15.ckpt/last.ckpt"
+# proteoscribe_config = "configs/inference/stage3_ProteoScribe_sample.json"
+# batch_size         = 256              # embedding batch size
+# device             = "cuda"
 # animate_prompts = [0, 1, 2]           # prompt indices to animate
 # store_probabilities = true            # save per-step probability distributions
+# extra_args         = []               # arbitrary extra --key value pairs passed through
 ```
 
 The number of replicas per prompt and other model-level sampling parameters are set in `configs/inference/stage3_ProteoScribe_sample.json`.
 
-#### `[blast]` — Step 5 search options
+##### Multiple generation configs
+
+To run Step 400 with different sampling strategies, use TOML array-of-tables (`[[generation]]`). Each variant gets its own output directory (auto-derived from the variant name or explicitly set). Downstream steps automatically fan out — one run per variant.
+
+```toml
+[[generation]]
+variant         = "random"
+unmasking_order = "random"
+token_strategy  = "sample"
+
+[[generation]]
+variant         = "confidence"
+unmasking_order = "confidence"
+token_strategy  = "argmax"
+```
+
+This produces `generation_random/`, `generation_confidence/`, `samples_random/`, `samples_confidence/`, etc. Steps 500-800 each run once per variant automatically. To collapse fan-out at a specific step, set `fan_out = false` on that step's section:
+
+```toml
+[blast]
+db       = "swissprot"
+fan_out  = false    # run once with base paths, ignore upstream variants
+```
+
+Target specific variants from the CLI with dot notation:
+
+```bash
+python run_pipeline.py configs/pipelines/MyFamily.toml --steps 400.random 500 600
+```
+
+Any step that supports a `[section]` in the TOML config can also use `[[section]]` for multi-variant runs (e.g., `[[blast]]` with different databases).
+
+#### `[blast]` — Step 600 search options
 
 ```toml
 [blast]
@@ -261,7 +316,7 @@ threads = 16
 # max_targets = 5
 ```
 
-#### `[fetch_structures]` — Step 5b options
+#### `[fetch_structures]` — Step 600b options
 
 ```toml
 # [fetch_structures]
@@ -270,7 +325,7 @@ threads = 16
 # experimental_only = true
 ```
 
-#### `[webapp]` — Step 8 options
+#### `[webapp]` — Step 900 options
 
 ```toml
 # [webapp]
@@ -279,19 +334,20 @@ threads = 16
 
 ## Pipeline overview
 
-Broadly, the BioM3 pipeline has two phases: an **initial phase** (Steps 1-3) that embeds, finetunes, and generates sequences, and an **analysis phase** (Steps 4-7) that predicts structures and evaluates results.
+Broadly, the BioM3 pipeline has two phases: an **initial phase** (Steps 100-400) that builds the dataset, embeds, finetunes, and generates sequences, and an **analysis phase** (Steps 500-800) that predicts structures and evaluates results.
 
 | Step | Name | Description | Input | Output | Env |
 |------|------|-------------|-------|--------|-----|
-| 1 | Embedding | PenCL + Facilitator encode sequences and text into joint embeddings, compiled to HDF5 | CSV (sequences + text) | `.hdf5` compiled embeddings | biom3-env |
-| 2 | Finetuning | Finetune pretrained ProteoScribe on family-specific embeddings | `.hdf5` from Step 1 | Model checkpoints (`.pth`) | biom3-env |
-| 3 | Generation | Sample novel protein sequences from text prompts using finetuned model | Model weights + prompts CSV | `.pt` output + FASTA files | biom3-env |
-| 4 | ColabFold | Predict 3D structures for generated sequences with AlphaFold2 | Per-prompt FASTA files | PDB files + `colabfold_results.csv` | colabfold |
-| 5 | BLAST | Search generated sequences against protein databases for homologs | Merged FASTA | `blast_hit_results.tsv` | blast-env |
-| 5b | Fetch structures | Download reference PDB structures for BLAST hits (experimental + AlphaFold) | BLAST TSV | Reference PDB files + manifest | biom3-env |
-| 6 | Compare structures | Structural alignment of generated vs. reference structures with TMalign | ColabFold CSV + BLAST TSV + PDBs | `results.csv` (TM-score, RMSD, seq ID) | biom3-env |
-| 7 | Plot results | Generate strip plots for TM-score, RMSD, sequence identity, pLDDT | Comparison CSV | PNG plots | biom3-env |
-| 8 | Web app | Interactive Streamlit app for browsing structures, alignments, and BLAST | Pipeline outputs | HTTP server (localhost) | biom3-env |
+| 100 | Build dataset | Construct a training dataset from reference databases using `biom3_build_dataset` | Reference databases | CSV (sequences + text) | biom3-env |
+| 200 | Embedding | PenCL + Facilitator encode sequences and text into joint embeddings, compiled to HDF5 | CSV (sequences + text) | `.hdf5` compiled embeddings | biom3-env |
+| 300 | Finetuning | Finetune pretrained ProteoScribe on family-specific embeddings | `.hdf5` from Step 200 | Model checkpoints (`.pth`) | biom3-env |
+| 400 | Generation | Sample novel protein sequences from text prompts using finetuned model | Model weights + prompts CSV | `.pt` output + FASTA files | biom3-env |
+| 500 | ColabFold | Predict 3D structures for generated sequences with AlphaFold2 | Per-prompt FASTA files | PDB files + `colabfold_results.csv` | colabfold |
+| 600 | BLAST | Search generated sequences against protein databases for homologs | Merged FASTA | `blast_hit_results.tsv` | blast-env |
+| 610 | Fetch structures | Download reference PDB structures for BLAST hits (experimental + AlphaFold) | BLAST TSV | Reference PDB files + manifest | biom3-env |
+| 700 | Compare structures | Structural alignment of generated vs. reference structures with TMalign | ColabFold CSV + BLAST TSV + PDBs | `results.csv` (TM-score, RMSD, seq ID) | biom3-env |
+| 800 | Plot results | Generate strip plots for TM-score, RMSD, sequence identity, pLDDT | Comparison CSV | PNG plots | biom3-env |
+| 900 | Web app | Interactive Streamlit app for browsing structures, alignments, and BLAST | Pipeline outputs | HTTP server (localhost) | biom3-env |
 
 ## Run the pipeline
 
@@ -304,7 +360,7 @@ source environment.sh
 python run_pipeline.py configs/pipelines/MyFamily.toml
 ```
 
-Preview what will run without executing:
+Preview what will run without executing. Dry-run prints each step's script and arguments, then an expected output tree:
 
 ```bash
 python run_pipeline.py configs/pipelines/MyFamily.toml --dry-run
@@ -312,25 +368,28 @@ python run_pipeline.py configs/pipelines/MyFamily.toml --dry-run
 
 The pipeline runner handles conda environment activation for each step automatically.
 
-### Initial phase (embedding + finetuning)
+### Initial phase (dataset + embedding + finetuning)
 
-Steps 1-3 train a family-specific model and generate sequences:
+Steps 100-400 build the dataset, train a family-specific model, and generate sequences:
 
 ```bash
-python run_pipeline.py configs/pipelines/MyFamily.toml --steps 1 2 3
+python run_pipeline.py configs/pipelines/MyFamily.toml --steps 1 2 3 4
 ```
 
 Or run individual scripts:
 
 ```bash
-# Step 1: Embed training data
-./pipeline/01_embedding.sh data/MyFamily/MyFamily_dataset.csv outputs/MyFamily/embeddings
+# Step 100: Build dataset from reference databases
+./pipeline/0100_build_dataset.sh <databases_dir> outputs/MyFamily/dataset
 
-# Step 2: Finetune ProteoScribe
-./pipeline/02_finetune.sh outputs/MyFamily/embeddings/MyFamily_dataset.compiled_emb.hdf5 outputs/MyFamily/finetuning 50
+# Step 200: Embed training data
+./pipeline/0200_embedding.sh data/MyFamily/MyFamily_dataset.csv outputs/MyFamily/embeddings
 
-# Step 3: Generate sequences from prompts
-./pipeline/03_generate.sh \
+# Step 300: Finetune ProteoScribe
+./pipeline/0300_finetune.sh outputs/MyFamily/embeddings/MyFamily_dataset.compiled_emb.hdf5 outputs/MyFamily/finetuning 50
+
+# Step 400: Generate sequences from prompts
+./pipeline/0400_generate.sh \
     outputs/MyFamily/finetuning/checkpoints/<run_id>/state_dict.best.pth \
     data/MyFamily/MyFamily_prompts.csv \
     outputs/MyFamily/generation \
@@ -339,37 +398,37 @@ Or run individual scripts:
 
 ### Analysis phase (structure prediction + evaluation)
 
-Steps 4-7 evaluate the generated sequences. These require FASTA output from Step 3:
+Steps 500-800 evaluate the generated sequences. These require FASTA output from Step 400:
 
 ```bash
-python run_pipeline.py configs/pipelines/MyFamily.toml --steps 4 5 5b 6 7
+python run_pipeline.py configs/pipelines/MyFamily.toml --steps 5 6 6b 7 8
 ```
 
 Or run individual scripts:
 
 ```bash
-# Step 4: Predict structures with ColabFold
+# Step 500: Predict structures with ColabFold
 conda activate colabfold
-./pipeline/04_colabfold.sh outputs/MyFamily/samples outputs/MyFamily/structures
+./pipeline/0500_colabfold.sh outputs/MyFamily/samples outputs/MyFamily/structures
 
-# Step 5: BLAST search
+# Step 600: BLAST search
 conda activate blast-env
-./pipeline/05_blast_search.sh outputs/MyFamily/samples/all_sequences.fasta outputs/MyFamily/blast
+./pipeline/0600_blast_search.sh outputs/MyFamily/samples/all_sequences.fasta outputs/MyFamily/blast
 
-# Step 5b: Fetch reference structures for BLAST hits
+# Step 600b: Fetch reference structures for BLAST hits
 conda activate biom3-env
-./pipeline/05b_fetch_hit_structures.sh outputs/MyFamily/blast/blast_hit_results.tsv outputs/MyFamily/blast
+./pipeline/0610_fetch_hit_structures.sh outputs/MyFamily/blast/blast_hit_results.tsv outputs/MyFamily/blast
 
-# Step 6: Compare structures (TMalign)
-./pipeline/06_compare_structures.sh \
+# Step 700: Compare structures (TMalign)
+./pipeline/0700_compare_structures.sh \
     outputs/MyFamily/structures/colabfold_results.csv \
     outputs/MyFamily/blast/blast_hit_results.tsv \
     outputs/MyFamily/structures \
     outputs/MyFamily/blast/reference_structures \
     outputs/MyFamily/comparison
 
-# Step 7: Plot results
-./pipeline/07_plot_results.sh \
+# Step 800: Plot results
+./pipeline/0800_plot_results.sh \
     outputs/MyFamily/comparison/results.csv \
     outputs/MyFamily/images \
     --colabfold-csv outputs/MyFamily/structures/colabfold_results.csv
@@ -377,21 +436,23 @@ conda activate biom3-env
 
 ### Individual steps
 
-Run any step directly with its shell script. Each script prints usage when called without arguments:
+Run any step directly with its shell script. Each script prints usage and available options when called without arguments:
 
 ```bash
-./pipeline/01_embedding.sh
-# Usage: ./pipeline/01_embedding.sh <input_csv> <output_dir>
+./pipeline/0200_embedding.sh
+# Usage: ./pipeline/0200_embedding.sh <input_csv> <output_dir> [options]
 ```
+
+All scripts accept optional `--key value` flags for overriding defaults (model weights, batch size, device, etc.). Pass `--` to forward additional arguments to the underlying tool.
 
 ### Web app
 
-Step 8 launches an interactive Streamlit app (not included in the default pipeline order):
+Step 900 launches an interactive Streamlit app (not included in the default pipeline order):
 
 ```bash
-python run_pipeline.py configs/pipelines/MyFamily.toml --steps 8
+python run_pipeline.py configs/pipelines/MyFamily.toml --steps 900
 # or
-./pipeline/08_webapp.sh --port 8501
+./pipeline/0900_webapp.sh --port 8501
 ```
 
 ## Output structure
@@ -400,51 +461,51 @@ All outputs are written under the `output_dir` specified in the TOML config. Her
 
 ```
 outputs/MyFamily/
-├── embeddings/                         # Step 1
+├── embeddings/                         # Step 200
 │   ├── <prefix>.PenCL_emb.pt          # Stage 1 embeddings (z_t, z_p tensors)
 │   ├── <prefix>.Facilitator_emb.pt    # Stage 2 embeddings (z_c tensor)
 │   ├── <prefix>.compiled_emb.hdf5     # Compiled HDF5 for finetuning
 │   ├── build_manifest.json
 │   └── run.log
 │
-├── finetuning/                         # Step 2
+├── finetuning/                         # Step 300
 │   ├── checkpoints/
 │   │   └── <run_id>/
-│   │       ├── state_dict.best.pth    # Best model weights (used by Step 3)
+│   │       ├── state_dict.best.pth    # Best model weights (used by Step 400)
 │   │       └── *.ckpt                 # Intermediate checkpoints
 │   └── runs/
 │       └── <run_id>/                  # Training logs and metrics
 │
-├── generation/                         # Step 3
+├── generation/                         # Step 400
 │   ├── <prefix>.ProteoScribe_output.pt   # Raw generated sequences
 │   ├── embeddings/                       # Prompt embeddings (intermediate)
 │   ├── animations/                       # GIFs (if --animate_prompts)
 │   └── probabilities/                    # .npz files (if --store_probabilities)
 │
-├── samples/                            # Step 3 (FASTA output)
-│   ├── all_sequences.fasta            # Merged FASTA for Steps 4-5
+├── samples/                            # Step 400 (FASTA output)
+│   ├── all_sequences.fasta            # Merged FASTA for Steps 5-6
 │   ├── <prefix>_prompt_0_samples.fasta
 │   ├── <prefix>_prompt_1_samples.fasta
 │   └── ...
 │
-├── structures/                         # Step 4
+├── structures/                         # Step 500
 │   ├── colabfold_results.csv          # Summary: structure, pLDDT, pTM, pdbfilename
 │   └── prompt_<i>/                    # Per-prompt ColabFold output
 │       ├── *.pdb                      # Predicted structures
 │       └── log.txt
 │
-├── blast/                              # Steps 5 + 5b
+├── blast/                              # Steps 6 + 6b
 │   ├── blast_hit_results.tsv          # BLAST hits (qseqid, sseqid, pident, evalue, ...)
-│   ├── structure_manifest.tsv         # Accession, source, PDB ID, resolution (Step 5b)
+│   ├── structure_manifest.tsv         # Accession, source, PDB ID, resolution (Step 600b)
 │   └── reference_structures/          # Downloaded reference PDBs
 │       └── <accession>.pdb
 │
-├── comparison/                         # Step 6
+├── comparison/                         # Step 700
 │   ├── results.csv                    # TM-score, RMSD, seq_id per query-reference pair
 │   └── logs/
 │       └── *_v_*.TMalign.log          # Individual TMalign output logs
 │
-└── images/                             # Step 7
+└── images/                             # Step 800
     ├── TM_scores.png
     ├── RMSD_scores.png
     ├── seqID_scores.png

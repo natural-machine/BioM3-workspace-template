@@ -1,6 +1,6 @@
 #!/bin/bash
 #=============================================================================
-# Step 8: Launch BioM3 Web App
+# Step 900: Launch BioM3 Web App
 #
 # Starts the BioM3 Streamlit web application for interactive exploration of
 # pipeline outputs: view and align 3D structures, color residues by metrics,
@@ -10,14 +10,14 @@
 # configs/app_settings.json. This is passed to biom3_app via --config.
 #
 # USAGE:
-#   ./pipeline/09_webapp.sh [--port PORT]
+#   ./pipeline/0900_webapp.sh [--port PORT]
 #
 # OPTIONS:
 #   --port PORT    Streamlit server port (default: 8501)
 #
 # EXAMPLE:
-#   ./pipeline/09_webapp.sh
-#   ./pipeline/09_webapp.sh --port 8502
+#   ./pipeline/0900_webapp.sh
+#   ./pipeline/0900_webapp.sh --port 8502
 #
 # REQUIRES:
 #   - BioM3-dev installed with app extras: pip install "biom3[app]"
@@ -55,7 +55,7 @@ if [ ! -f "${config}" ]; then
 fi
 
 echo "============================================="
-echo "Step 8: BioM3 Web App (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
+echo "Step 900: BioM3 Web App (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "Config:  ${config}"
 echo "URL:     http://localhost:${port:-8501}"

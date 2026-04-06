@@ -8,5 +8,5 @@
   "unmasking_order": "random",
   "token_strategy": "sample",
   "batch_size_sample": 32,
-  "seed": 42
+  "seed": 0
 }

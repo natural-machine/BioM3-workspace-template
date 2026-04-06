@@ -28,7 +28,7 @@ Version compatibility with BioM3-dev is tracked in [SYNC_LOG.md](SYNC_LOG.md).
 ## Repository layout
 
 ```
-pipeline/           # Step scripts (01_embedding.sh through 08_webapp.sh)
+pipeline/           # Step scripts (0100_build_dataset.sh through 0900_webapp.sh)
 scripts/            # Helper scripts (sync, setup)
 configs/            # JSON model/training configs + TOML pipeline configs
 requirements/       # Per-machine pip requirements (spark, polaris, aurora)
@@ -50,10 +50,10 @@ Requires BioM3-dev installed (`pip install git+https://github.com/addison-nm/Bio
 ```bash
 source environment.sh
 python run_pipeline.py configs/pipelines/<family>.toml   # full pipeline
-./pipeline/01_embedding.sh                               # individual step
+./pipeline/0200_embedding.sh                              # individual step
 ```
 
-Steps 4-7 require separate conda environments (colabfold, blast-env). The pipeline runner handles environment activation.
+Steps 5-6 require separate conda environments (colabfold, blast-env). The pipeline runner handles environment activation.
 
 Weights and databases are symlinked from BioM3-data-share. See README.md for per-machine paths and sync instructions.
 

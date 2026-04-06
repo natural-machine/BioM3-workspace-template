@@ -1,15 +1,23 @@
 #!/bin/bash
 #=============================================================================
-# Step 3: Generate Protein Sequences
+# Step 400: Generate Protein Sequences
 #
 # Uses a finetuned (or pretrained) ProteoScribe model to generate novel
 # protein sequences from text prompts. First embeds the input through
 # PenCL and Facilitator, then runs ProteoScribe diffusion sampling.
 #
 # USAGE:
-#   ./pipeline/03_generate.sh <model_weights> <input_csv> <output_dir> [options]
+#   ./pipeline/0400_generate.sh <model_weights> <input_csv> <output_dir> [options]
 #
 # OPTIONS:
+#   --pencl_weights PATH                   PenCL model weights
+#   --facilitator_weights PATH             Facilitator model weights
+#   --pencl_config PATH                    PenCL config JSON
+#   --facilitator_config PATH              Facilitator config JSON
+#   --proteoscribe_config PATH             ProteoScribe sampling config JSON
+#   --batch_size N                         Embedding batch size (default: 256)
+#   --dataset_key KEY                      HDF5 dataset key (default: MMD_data)
+#   --device DEVICE                        Compute device (default: $BIOM3_DEVICE or cuda)
 #   --fasta                                Write per-prompt FASTA files
 #   --fasta_merge                          Also write a merged FASTA with all sequences
 #   --fasta_dir PATH                       Output directory for FASTA files (default: <output_dir>/fasta/)
@@ -23,22 +31,23 @@
 #                                          Probability visualization style (default: brightness)
 #   --animation_metrics NAME [NAME ...]    Per-position metric boxes (e.g. confidence)
 #   --store_probabilities                  Store per-step probability distributions as .npz
+#   --                                     Pass remaining args to biom3_ProteoScribe_sample
 #
 # EXAMPLE (basic):
-#   ./pipeline/03_generate.sh \
+#   ./pipeline/0400_generate.sh \
 #       outputs/SH3/finetuning/checkpoints/.../state_dict.best.pth \
 #       data/SH3/SH3_prompts.csv \
 #       outputs/SH3/generation
 #
 # EXAMPLE (with sampling options and animation):
-#   ./pipeline/03_generate.sh \
+#   ./pipeline/0400_generate.sh \
 #       outputs/SH3/finetuning/checkpoints/.../state_dict.best.pth \
 #       data/SH3/SH3_prompts.csv \
 #       outputs/SH3/generation \
 #       --token_strategy argmax --animate_prompts 0 1 2
 #
 # EXAMPLE (colored animation with probability storage):
-#   ./pipeline/03_generate.sh \
+#   ./pipeline/0400_generate.sh \
 #       outputs/SH3/finetuning/checkpoints/.../state_dict.best.pth \
 #       data/SH3/SH3_prompts.csv \
 #       outputs/SH3/generation \
@@ -47,7 +56,7 @@
 #
 # INPUT:
 #   - model_weights: Path to finetuned ProteoScribe weights (.pth, .bin, or .ckpt)
-#   - input_csv: CSV with text prompts (same format as Step 1)
+#   - input_csv: CSV with text prompts (same format as Step 2)
 #   - output_dir: Directory for generated output
 #
 # OUTPUT:
@@ -65,6 +74,14 @@ if [ "$#" -lt 3 ]; then
     echo "Usage: $0 <model_weights> <input_csv> <output_dir> [options]"
     echo ""
     echo "Options:"
+    echo "  --pencl_weights PATH                   PenCL model weights"
+    echo "  --facilitator_weights PATH             Facilitator model weights"
+    echo "  --pencl_config PATH                    PenCL config JSON"
+    echo "  --facilitator_config PATH              Facilitator config JSON"
+    echo "  --proteoscribe_config PATH             ProteoScribe sampling config JSON"
+    echo "  --batch_size N                         Embedding batch size (default: 256)"
+    echo "  --dataset_key KEY                      HDF5 dataset key (default: MMD_data)"
+    echo "  --device DEVICE                        Compute device (default: cuda)"
     echo "  --fasta                                Write per-prompt FASTA files"
     echo "  --fasta_merge                          Write merged FASTA with all sequences"
     echo "  --fasta_dir PATH                       Output directory for FASTA files"
@@ -78,6 +95,7 @@ if [ "$#" -lt 3 ]; then
     echo "                                         Probability visualization style"
     echo "  --animation_metrics NAME [NAME ...]    Per-position metric boxes"
     echo "  --store_probabilities                  Store per-step probabilities as .npz"
+    echo "  --                                     Pass remaining args to biom3_ProteoScribe_sample"
     echo ""
     echo "Example: $0 outputs/SH3/finetuning/.../state_dict.best.pth data/SH3/prompts.csv outputs/SH3/generation"
     exit 1
@@ -99,6 +117,14 @@ if [ ! -f "${input_csv}" ]; then
 fi
 
 # --- Parse optional flags ---
+pencl_weights=""
+facilitator_weights=""
+pencl_config=""
+facilitator_config=""
+proteoscribe_config=""
+batch_size=""
+dataset_key=""
+device=""
 fasta=false
 fasta_merge=false
 fasta_dir=""
@@ -110,9 +136,47 @@ animation_dir=""
 animation_style=""
 animation_metrics=()
 store_probabilities=false
+extra_args=()
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
+        --pencl_weights)
+            pencl_weights="$2"
+            shift 2
+            ;;
+        --facilitator_weights)
+            facilitator_weights="$2"
+            shift 2
+            ;;
+        --pencl_config)
+            pencl_config="$2"
+            shift 2
+            ;;
+        --facilitator_config)
+            facilitator_config="$2"
+            shift 2
+            ;;
+        --proteoscribe_config)
+            proteoscribe_config="$2"
+            shift 2
+            ;;
+        --batch_size)
+            batch_size="$2"
+            shift 2
+            ;;
+        --dataset_key)
+            dataset_key="$2"
+            shift 2
+            ;;
+        --device)
+            device="$2"
+            shift 2
+            ;;
+        --)
+            shift
+            extra_args=("$@")
+            break
+            ;;
         --fasta)
             fasta=true
             shift
@@ -175,21 +239,23 @@ projdir=$(cd "$(dirname "$0")/.." && pwd)
 cd ${projdir}
 
 embed_dir="${outdir}/embeddings"
-pencl_weights=weights/PenCL/PenCL_V09152023_last.ckpt
-facilitator_weights=weights/Facilitator/Facilitator_MMD15.ckpt/last.ckpt
-config1=configs/inference/stage1_PenCL.json
-config2=configs/inference/stage2_Facilitator.json
-config3=configs/inference/stage3_ProteoScribe_sample.json
+pencl_weights="${pencl_weights:-weights/PenCL/PenCL_V09152023_last.ckpt}"
+facilitator_weights="${facilitator_weights:-weights/Facilitator/Facilitator_MMD15.ckpt/last.ckpt}"
+pencl_config="${pencl_config:-configs/inference/stage1_PenCL.json}"
+facilitator_config="${facilitator_config:-configs/inference/stage2_Facilitator.json}"
+proteoscribe_config="${proteoscribe_config:-configs/inference/stage3_ProteoScribe_sample.json}"
+batch_size="${batch_size:-256}"
+dataset_key="${dataset_key:-MMD_data}"
+device="${device:-${BIOM3_DEVICE:-cuda}}"
 
 prefix=$(basename "${input_csv}" .csv)
-device="${BIOM3_DEVICE:-cuda}"
 
 export TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD=1
 
 mkdir -p ${embed_dir} ${outdir}
 
 echo "============================================="
-echo "Step 3: Generate Protein Sequences (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
+echo "Step 400: Generate Protein Sequences (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "Model weights: ${model_weights}"
 echo "Input CSV:     ${input_csv}"
@@ -214,11 +280,11 @@ biom3_embedding_pipeline \
     -o ${embed_dir} \
     --pencl_weights ${pencl_weights} \
     --facilitator_weights ${facilitator_weights} \
-    --pencl_config ${config1} \
-    --facilitator_config ${config2} \
+    --pencl_config ${pencl_config} \
+    --facilitator_config ${facilitator_config} \
     --prefix ${prefix} \
-    --batch_size 256 \
-    --dataset_key MMD_data \
+    --batch_size ${batch_size} \
+    --dataset_key ${dataset_key} \
     --device ${device}
 
 echo "[1/2] Done."
@@ -228,7 +294,7 @@ echo ""
 echo "[2/2] Generating sequences with ProteoScribe..."
 proteoscribe_args=(
     -i "${embed_dir}/${prefix}.Facilitator_emb.pt"
-    -c "${config3}"
+    -c "${proteoscribe_config}"
     -m "${model_weights}"
     -o "${outdir}/${prefix}.ProteoScribe_output.pt"
     --device "${device}"
@@ -268,7 +334,7 @@ if [ -n "${fasta_dir}" ]; then
     proteoscribe_args+=(--fasta_dir "${fasta_dir}")
 fi
 
-biom3_ProteoScribe_sample "${proteoscribe_args[@]}"
+biom3_ProteoScribe_sample "${proteoscribe_args[@]}" "${extra_args[@]}"
 
 echo "[2/2] Done."
 echo ""

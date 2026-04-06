@@ -1,23 +1,23 @@
 #!/bin/bash
 #=============================================================================
-# Step 4: Structure Prediction with ColabFold
+# Step 500: Structure Prediction with ColabFold
 #
 # Runs ColabFold (AlphaFold2) structure prediction on per-prompt FASTA files
-# produced by Step 3 (with --fasta). After all predictions complete, parses
+# produced by Step 400 (with --fasta). After all predictions complete, parses
 # the ColabFold log files to extract pLDDT and pTM scores into a summary CSV.
 #
 # Requires the `colabfold` conda environment to be active.
 #
 # USAGE:
-#   ./pipeline/05_colabfold.sh <fasta_dir> <output_dir>
+#   ./pipeline/0500_colabfold.sh <fasta_dir> <output_dir>
 #
 # EXAMPLE:
-#   ./pipeline/05_colabfold.sh outputs/SH3/samples outputs/SH3/structures
-#   ./pipeline/05_colabfold.sh outputs/CM/samples outputs/CM/structures
+#   ./pipeline/0500_colabfold.sh outputs/SH3/samples outputs/SH3/structures
+#   ./pipeline/0500_colabfold.sh outputs/CM/samples outputs/CM/structures
 #
 # INPUT:
 #   <fasta_dir>: directory containing per-prompt FASTA files (prompt_0.fasta,
-#                prompt_1.fasta, ...) from Step 3 --fasta output
+#                prompt_1.fasta, ...) from Step 400 --fasta output
 #   <output_dir>: directory for ColabFold output (PDBs and logs)
 #
 # OUTPUT:
@@ -57,7 +57,7 @@ cd ${projdir}
 mkdir -p "${outdir}"
 
 echo "============================================="
-echo "Step 4: Structure Prediction with ColabFold (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
+echo "Step 500: Structure Prediction with ColabFold (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "FASTA dir:  ${fasta_dir}"
 echo "Output dir: ${outdir}"

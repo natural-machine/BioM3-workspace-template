@@ -1,6 +1,6 @@
 #!/bin/bash
 #=============================================================================
-# Step 5b: Fetch Reference Structures for SwissProt BLAST Hits
+# Step 610: Fetch Reference Structures for SwissProt BLAST Hits
 #
 # Resolves 3D structures for UniProt accessions found in BLAST results.
 # For each hit, tries to download an experimental PDB structure from RCSB,
@@ -12,10 +12,10 @@
 # UniProt REST API.
 #
 # Structures are saved as {accession}.pdb in <output_dir>/reference_structures/,
-# which integrates directly with Step 6 (06_compare_structures.sh).
+# which integrates directly with Step 700 (0700_compare_structures.sh).
 #
 # USAGE:
-#   ./pipeline/06b_fetch_hit_structures.sh <blast_tsv> <output_dir> [options]
+#   ./pipeline/0610_fetch_hit_structures.sh <blast_tsv> <output_dir> [options]
 #
 # OPTIONS:
 #   --swissprot-dat <path>   Path to local uniprot_sprot.dat.gz for offline
@@ -25,17 +25,17 @@
 #   --experimental-only      Skip AlphaFold fallback, experimental PDB only
 #
 # EXAMPLE (auto-detect local DAT, hybrid download):
-#   ./pipeline/06b_fetch_hit_structures.sh \
+#   ./pipeline/0610_fetch_hit_structures.sh \
 #       outputs/SH3/blast/blast_hit_results.tsv \
 #       outputs/SH3/blast
 #
 # EXAMPLE (AlphaFold only, skip PDB lookup):
-#   ./pipeline/06b_fetch_hit_structures.sh \
+#   ./pipeline/0610_fetch_hit_structures.sh \
 #       outputs/SH3/blast/blast_hit_results.tsv \
 #       outputs/SH3/blast --alphafold-only
 #
 # INPUT:
-#   <blast_tsv>: blast_hit_results.tsv from Step 5
+#   <blast_tsv>: blast_hit_results.tsv from Step 6
 #
 # OUTPUT:
 #   <output_dir>/reference_structures/   (downloaded PDB files)
@@ -111,7 +111,7 @@ if [ -z "${swissprot_dat}" ] && [ -z "${no_local_dat}" ] && [ -z "${alphafold_on
 fi
 
 echo "============================================="
-echo "Step 5b: Fetch Reference Structures (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
+echo "Step 610: Fetch Reference Structures (workflow v${BIOM3_WORKSPACE_VERSION:-unknown})"
 echo "============================================="
 echo "BLAST results: ${blast_tsv}"
 echo "Output dir:    ${outdir}"
