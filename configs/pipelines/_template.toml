@@ -1,0 +1,94 @@
+# Pipeline configuration template for BioM3
+#
+# Copy this file and replace <FAMILY> placeholders with your protein family name.
+# Run: python run_pipeline.py configs/pipelines/<FAMILY>.toml
+#
+# For a quick test, try running with fewer epochs and a mini dataset:
+#   python scripts/create_mini_dataset.py data/<FAMILY>/<dataset>.csv \
+#       -n 500 -o data/<FAMILY>_mini/<dataset_mini>.csv --seed 42
+
+# ---------------------------------------------------------------------------
+# [pipeline] — Which steps to run (in order)
+# ---------------------------------------------------------------------------
+# Available steps: 1, 2, 3, 4, 5, "5b", 6, 7, 8
+#   1  = Embedding (PenCL + Facilitator)
+#   2  = Finetuning (ProteoScribe)
+#   3  = Generation (sequence sampling + FASTA)
+#   4  = Structure prediction (ColabFold)
+#   5  = BLAST homology search
+#   5b = Fetch reference structures for BLAST hits
+#   6  = Structure comparison (TMalign)
+#   7  = Plot results
+#   8  = Web app (interactive, not in default order)
+#
+# For a full pipeline run (Steps 1-7):
+[pipeline]
+steps = [1, 2, 3, 4, 5, "5b", 6, 7]
+#
+# For analysis only (requires prior Step 3 FASTA output):
+# steps = [4, 5, "5b", 6, 7]
+
+# ---------------------------------------------------------------------------
+# [environments] — Conda environment names for each step group
+# ---------------------------------------------------------------------------
+[environments]
+biom3     = "biom3-env"       # Steps 1-3, 6-8
+colabfold = "colabfold"       # Step 4
+blast     = "blast-env"       # Step 5
+
+# ---------------------------------------------------------------------------
+# [paths] — Input/output paths
+# ---------------------------------------------------------------------------
+[paths]
+output_dir  = "outputs/<FAMILY>"
+input_csv   = "data/<FAMILY>/<FAMILY>_dataset.csv"
+prompts_csv = "data/<FAMILY>/<FAMILY>_prompts.csv"
+epochs      = 50
+
+# Uncomment to override auto-detected paths:
+# model_weights = "outputs/<FAMILY>/finetuning/checkpoints/<run_id>/state_dict.best.pth"
+# pt_file       = "outputs/<FAMILY>/generation/<FAMILY>_prompts.ProteoScribe_output.pt"
+
+# ---------------------------------------------------------------------------
+# [finetuning] — Step 2 options
+# ---------------------------------------------------------------------------
+[finetuning]
+config = "configs/stage3_training/finetune.json"
+
+# ---------------------------------------------------------------------------
+# [generation] — Step 3 options (all optional, defaults come from config JSON)
+# ---------------------------------------------------------------------------
+# [generation]
+# unmasking_order = "random"              # random | confidence | confidence_no_pad
+# token_strategy  = "sample"              # sample | argmax
+# animate_prompts = [0, 1, 2]             # prompt indices to animate, or omit
+# animate_replicas = 1                    # replicas to animate per prompt
+# animation_dir   = "outputs/<FAMILY>/generation/animations"
+# animation_style = "brightness"          # brightness | colorbar | logo
+# animation_metrics = ["confidence"]      # per-position metric boxes
+# store_probabilities = true              # save per-step probability distributions
+
+# ---------------------------------------------------------------------------
+# [blast] — Step 5 options
+# ---------------------------------------------------------------------------
+[blast]
+db      = "swissprot"        # swissprot | pdbaa | nr | /path/to/local/db
+threads = 16
+# remote = true              # force remote NCBI search
+# local  = true              # force local search
+# max_targets = 5            # max target sequences per query
+
+# ---------------------------------------------------------------------------
+# [fetch_structures] — Step 5b options
+# ---------------------------------------------------------------------------
+# [fetch_structures]
+# swissprot_dat = "/path/to/uniprot_sprot.dat.gz"  # local DAT for offline PDB lookup
+# no_local_dat  = true       # skip local DAT auto-detection, use UniProt API
+# alphafold_only = true      # skip experimental PDB, AlphaFold only
+# experimental_only = true   # skip AlphaFold fallback
+
+# ---------------------------------------------------------------------------
+# [webapp] — Step 8 options
+# ---------------------------------------------------------------------------
+# [webapp]
+# port = 8501

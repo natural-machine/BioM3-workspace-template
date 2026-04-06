@@ -1,0 +1,73 @@
+{
+  "description": "Finetuning ProteoScribe (1 block, original paper architecture). Unfreezes only the last layer of the block.",
+  "model_name": "BioM3-v0",
+  "tags": [],
+  "notes": [],
+  "_base_configs": ["./models/_base_ProteoScribe_1block.json"],
+  "_overwrite_configs": [],
+
+  "finetune": true,
+  "pretrained_weights": "weights/ProteoScribe/ProteoScribe_epoch200.pth",
+  "finetune_last_n_blocks": 1,
+  "finetune_last_n_layers": 1,
+  "finetune_output_layers": true,
+
+  "primary_data_path": null,
+  "secondary_data_paths": null,
+  "training_strategy": "auto",
+  "sequence_keyname": "sequence",
+
+  "wandb": false,
+  "wandb_entity": "thenaturalmachine",
+  "wandb_project": "BioM3-workflow-demo",
+  "wandb_tags": ["finetuning"],
+
+  "choose_optim": "AdamW",
+  "lr": 1e-4,
+  "scale_learning_rate": false,
+  "weight_decay": 1e-6,
+  "scheduler_gamma": "coswarmup",
+
+  "seed": 0,
+  "epochs": 20,
+  "valid_size": 0.2,
+  "enter_eval": 1000,
+  "resume_from_checkpoint": null,
+  "batch_size": 32,
+  "warmup_steps": 500,
+  "ema_inv_gamma": 1.0,
+  "ema_power": 0.75,
+  "ema_max_value": 0.95,
+  "task": "proteins",
+  "max_steps": 3000000,
+
+  "device": "cuda",
+  "precision": "bf16",
+  "gpu_devices": 1,
+  "num_nodes": 1,
+  "acc_grad_batches": 1,
+
+  "val_check_interval": 20,
+  "limit_val_batches": 0.05,
+
+  "log_every_n_steps": 100,
+  "start_secondary": false,
+  "num_workers": 16,
+
+  "output_root": null,
+  "checkpoints_folder": "checkpoints",
+  "runs_folder": "runs",
+
+  "checkpoint_monitors": null,
+  "checkpoint_every_n_steps": null,
+  "checkpoint_every_n_epochs": null,
+
+  "early_stopping_metric": null,
+  "early_stopping_patience": 10,
+  "early_stopping_min_delta": 0.0,
+  "early_stopping_mode": "min",
+
+  "save_metrics_history": true,
+  "metrics_history_every_n_steps": 1,
+  "metrics_history_ranks": [0]
+}

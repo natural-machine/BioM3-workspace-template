@@ -1,0 +1,7 @@
+{
+  "data_dirs": [
+    {"label": "Pipeline Outputs", "path": "outputs/"},
+    {"label": "Input Data", "path": "data/"},
+    {"label": "Model Weights", "path": "weights/"}
+  ]
+}
