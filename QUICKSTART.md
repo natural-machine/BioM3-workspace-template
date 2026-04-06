@@ -24,7 +24,30 @@ How to create a new research workspace from the BioM3 workspace template and run
 
 ## Create your workspace
 
-Click **"Use this template"** on the [GitHub repository](https://github.com/natural-machine/BioM3-workspace-template), or clone directly:
+For collaborative consistency, all BioM3 workspaces should live inside a shared `BioM3-ecosystem/` directory. Symlink `BioM3-data-share` into this directory so that all workspaces can reference weights, databases, and datasets via the same relative paths. The resulting layout should look like:
+
+```
+BioM3-ecosystem/
+├── BioM3-dev/                  # core library (cloned, optional)
+├── BioM3-data-share/           # symlink to shared data on this machine (--> /path/to/shared/BioM3-data-share)
+├── BioM3-workflow-demo/        # reference demo (optional)
+├── my-first-workspace/         # your workspace (from template)
+└── my-second-workspace/        # another workspace (from template)
+```
+
+To set this up:
+
+```bash
+mkdir -p BioM3-ecosystem && cd BioM3-ecosystem
+
+# Symlink BioM3-data-share to the shared location on your machine
+ln -s /data/data-share/BioM3-data-share BioM3-data-share   # DGX Spark example
+
+# Clone the core library
+git clone https://github.com/addison-nm/BioM3-dev.git
+```
+
+Then create your workspace from the template. Click **"Use this template"** on the [GitHub repository](https://github.com/natural-machine/BioM3-workspace-template), or clone directly:
 
 ```bash
 git clone https://github.com/natural-machine/BioM3-workspace-template.git my-workspace
