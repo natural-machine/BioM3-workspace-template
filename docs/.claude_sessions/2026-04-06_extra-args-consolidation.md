@@ -49,6 +49,10 @@ Added `_sample_pipeline_configs/full_demo.toml` — full pipeline (Steps 200-800
 - `_sample_pipeline_configs/full_demo.toml` — new
 - `QUICKSTART.md` — updated embedding, finetuning, generation examples
 
+### Bug fix: underscore vs hyphen in biom3_build_dataset flags
+
+`biom3_build_dataset` uses underscores in its CLI flags (`--pfam_ids`, `--enrich_pfam`, `--add_taxonomy`, etc.), not hyphens. The old code had `flag.replace('_', '-')` which produced incorrect flag names. Fixed `--pfam-ids` → `--pfam_ids` and `--output-filename` → `--output_filename` in `run_pipeline.py`, and updated all TOML configs to use underscore-format flags for Step 100 extra_args.
+
 ## Design decisions
 
 - **Why `separator=False` for Step 400?** The shell script runs two Python commands and routes flags to the correct one. `--` passthrough sent everything to ProteoScribe, breaking `--batch_size` which belongs to the embedding sub-command.

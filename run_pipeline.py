@@ -464,8 +464,8 @@ def build_step_args(
                     "Add pfam_ids = [\"PF00018\"] to [build_dataset] in "
                     "your config."
                 )
-            args = [outdir, "--pfam-ids"] + [str(x) for x in pfam_ids]
-            args += ["--output-filename", Path(training_csv).name]
+            args = [outdir, "--pfam_ids"] + [str(x) for x in pfam_ids]
+            args += ["--output_filename", Path(training_csv).name]
             return _append_extra_args(args, vc, separator=False)
 
         case "200":

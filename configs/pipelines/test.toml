@@ -68,9 +68,9 @@ training_csv   = "data/datasets/SH3_mini/FINAL_SH3_mini_all_dataset_with_prompts
 # training_csv = "outputs/TEST/TEST_dataset.csv"  # overrides [paths] default
 # extra_args = [
 #     "--config", "configs/dbio_config.json",
-#     "--enrich-pfam",
-#     "--annotation-cache", "data/databases/.cache/trembl_annotations.parquet",
-#     "--add-taxonomy",
+#     "--enrich_pfam",
+#     "--annotation_cache", "data/databases/.cache/trembl_annotations.parquet",
+#     "--add_taxonomy",
 # ]
 
 # ---------------------------------------------------------------------------

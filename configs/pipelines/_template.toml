@@ -76,11 +76,11 @@ pfam_ids = ["<PFAM_ID>"]
 training_csv = "outputs/<FAMILY>/<FAMILY>_dataset.csv"
 extra_args = [
     "--config",  "configs/dbio_config.json",
-    "--enrich-pfam",
-    "--add-taxonomy",
-    "--annotation-cache",  "data/.cache/trembl_annotations.parquet",
-#    "--taxonomy-filter",  "superkingdom=Bacteria",
-#    "--chunk-size",  "500000",
+    "--enrich_pfam",
+    "--add_taxonomy",
+    "--annotation_cache",  "data/.cache/trembl_annotations.parquet",
+#    "--taxonomy_filter",  "superkingdom=Bacteria",
+#    "--chunk_size",  "500000",
 ]
 
 # ---------------------------------------------------------------------------

@@ -36,9 +36,9 @@ pfam_ids = ["P00018"]
 training_csv = "outputs/SH3_mini_demo_build_dataset/built_SH3_dataset.csv"
 extra_args = [
     "--config",  "configs/dbio_config.json",
-    "--enrich-pfam",
-    "--add-taxonomy",
-    "--annotation-cache",  "data/.cache/trembl_annotations.parquet",
+    "--enrich_pfam",
+    "--add_taxonomy",
+    "--annotation_cache",  "data/.cache/trembl_annotations.parquet",
 ]
 
 # ---------------------------------------------------------------------------
