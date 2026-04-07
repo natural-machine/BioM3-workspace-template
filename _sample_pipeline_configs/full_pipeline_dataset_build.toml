@@ -1,0 +1,95 @@
+# ===========================================================================
+# Full pipeline demo using the mini SH3 dataset (2 prompts)
+#
+# Run: python run_pipeline.py _sample_pipeline_configs/full_demo.toml
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# --- [pipeline] — Which steps to run (in order)
+# ---------------------------------------------------------------------------
+
+[pipeline]
+steps = [100, 200, 300, 400, 500, 600, 610, 700, 800]
+
+# ---------------------------------------------------------------------------
+# --- [environments] — Conda environment names for each step group
+# ---------------------------------------------------------------------------
+
+[environments]
+biom3     = "biom3-env"       # Steps 100-400, 700-900
+colabfold = "colabfold"       # Step 500
+blast     = "blast-env"       # Step 600
+
+# ---------------------------------------------------------------------------
+# --- [paths] — Input/output paths
+# ---------------------------------------------------------------------------
+
+[paths]
+output_dir   = "outputs/SH3_mini_demo_build_dataset"
+
+# ---------------------------------------------------------------------------
+# --- [build_dataset] — Step 100 options
+# ---------------------------------------------------------------------------
+
+[build_dataset]
+pfam_ids = ["P00018"]
+training_csv = "outputs/SH3_mini_demo_build_dataset/built_SH3_dataset.csv"
+extra_args = [
+    "--config",  "configs/dbio_config.json",
+    "--enrich-pfam",
+    "--add-taxonomy",
+    "--annotation-cache",  "data/.cache/trembl_annotations.parquet",
+]
+
+# ---------------------------------------------------------------------------
+# --- [embedding] — Step 200 options
+# ---------------------------------------------------------------------------
+
+[embedding]
+extra_args = [
+    "--batch_size", "128",
+    "--device",     "cuda",
+]
+
+# ---------------------------------------------------------------------------
+# --- [finetuning] — Step 300 options
+# ---------------------------------------------------------------------------
+
+[finetuning]
+epochs = 3
+extra_args = [
+    "--config",     "configs/stage3_training/finetune.json",
+    "--batch_size", "64",
+    "--device",     "cuda",
+]
+
+# ---------------------------------------------------------------------------
+# --- [generation] — Step 400 options
+# ---------------------------------------------------------------------------
+
+[generation]
+prompts_csv = "data/datasets/SH3_mini/SH3_prompts.csv"
+model_weights = "weights/ProteoScribe/ProteoScribe_SH3_epoch52.ckpt/single_model.pth"
+extra_args = [
+    "--unmasking_order",    "random",
+    "--token_strategy",     "sample",
+    "--batch_size",         "128",
+    "--animate_prompts",    "0", "1",
+    "--animate_replicas",   "1",
+    "--animation_style",    "gauge",
+    "--animation_metrics",  "confidence",
+    "--store_probabilities",
+]
+
+# ---------------------------------------------------------------------------
+# --- [blast] — Step 600 options
+# ---------------------------------------------------------------------------
+
+[blast]
+extra_args = ["--db", "swissprot", "--threads", "8"]
+
+# ---------------------------------------------------------------------------
+# --- [fetch_structures] — Step 610 options
+# ---------------------------------------------------------------------------
+
+# Uses defaults (UniProt API lookup, AlphaFold fallback)

@@ -1,0 +1,110 @@
+# ===========================================================================
+# Pipeline configuration template for BioM3
+#
+# Copy this file and replace <FAMILY> placeholders with your protein family name.
+# Run: python run_pipeline.py configs/pipelines/<FAMILY>.toml
+#
+# For a quick test, try running with fewer epochs and a mini dataset:
+#   python scripts/create_mini_dataset.py data/<FAMILY>/<dataset>.csv \
+#       -n 500 -o data/<FAMILY>_mini/<dataset_mini>.csv --seed 42
+# ===========================================================================
+# ===========================================================================
+# SAMPLE PIPELINE: One run, from pre-existing through the entire pipeline,
+# without dataset creation.
+# ===========================================================================
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# [pipeline] — Which steps to run (in order)
+# ---------------------------------------------------------------------------
+
+[pipeline]
+steps = [200, 300, 400, 500, 600, 610, 700, 800]  # skipping step 100, dataset building
+
+# ---------------------------------------------------------------------------
+# [environments] — Conda environment names for each step group
+# ---------------------------------------------------------------------------
+
+[environments]
+biom3     = "biom3-env"       # Steps 100-400, 700-900
+colabfold = "colabfold"       # Step 500
+blast     = "blast-env"       # Step 600
+
+# ---------------------------------------------------------------------------
+# [paths] — Input/output paths
+# ---------------------------------------------------------------------------
+
+[paths]
+# --- Base path for all outputs
+output_dir  = "outputs/SAMPLE_PIPELINE_1"
+
+# --- Training dataset (used by Step 200 when skipping Step 100)
+training_csv   = "data/datasets/SH3_mini/FINAL_SH3_mini_all_dataset_with_prompts.csv"
+
+# ---------------------------------------------------------------------------
+# [embedding] — Step 200 options
+# ---------------------------------------------------------------------------
+# --- All flags pass through to 0200_embedding.sh via extra_args.
+# --- Defaults: pencl_weights, facilitator_weights, pencl_config,
+# --- facilitator_config, batch_size=32, dataset_key=MMD_data, device=cuda.
+
+# [embedding]
+# extra_args = ["--batch_size", "128"]
+
+# ---------------------------------------------------------------------------
+# [finetuning] — Step 300 options (default: config=configs/stage3_training/finetune.json, device=cuda)
+# ---------------------------------------------------------------------------
+
+[finetuning]
+epochs = 3
+extra_args = ["--config", "configs/stage3_training/finetune.json", "--batch_size", "64"]
+
+# ---------------------------------------------------------------------------
+# [generation] — Step 400 options (defaults: proteoscribe_config=stage3_ProteoScribe_sample.json,
+# --- batch_size=256, dataset_key=MMD_data, device=cuda)
+# ---------------------------------------------------------------------------
+
+# --- Default values inherited by all [[generation]] variants below.
+# --- Variant extra_args are concatenated with defaults extra_args.
+[generation_defaults]
+prompts_csv = "data/datasets/SH3_mini/SH3_prompts.csv"
+model_weights = "weights/ProteoScribe/ProteoScribe_SH3_epoch52.ckpt/single_model.pth"
+extra_args = [
+    "--batch_size", "128",
+    "--animate_prompts", "0", "1",
+    "--animate_replicas", "0", "1",
+    "--animation_style", "brightness",
+    "--animation_metrics", "confidence",
+    "--store_probabilities",
+]
+
+[[generation]]
+variant    = "random-sample"
+extra_args = ["--unmasking_order", "random", "--token_strategy", "sample"]
+
+[[generation]]
+variant    = "confidence-sample"
+extra_args = ["--unmasking_order", "confidence", "--token_strategy", "sample"]
+
+[[generation]]
+variant    = "confidence_no_pad-sample"
+extra_args = ["--unmasking_order", "confidence_no_pad", "--token_strategy", "sample"]
+
+# ---------------------------------------------------------------------------
+# [blast] — Step 600 options
+# ---------------------------------------------------------------------------
+[blast]
+extra_args = ["--db", "swissprot", "--threads", "16"]
+
+# ---------------------------------------------------------------------------
+# [fetch_structures] — Step 610 options
+# ---------------------------------------------------------------------------
+
+# [fetch_structures]
+# extra_args = ["--swissprot-dat", "/path/to/uniprot_sprot.dat.gz"]
+
+# ---------------------------------------------------------------------------
+# [webapp] — Step 900 options
+# ---------------------------------------------------------------------------
+# [webapp]
+# port = 8501

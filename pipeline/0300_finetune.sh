@@ -50,6 +50,7 @@ fi
 # --- Parse optional flags ---
 config_path=""
 device=""
+extra_args=()
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -60,6 +61,11 @@ while [ "$#" -gt 0 ]; do
         --device)
             device="$2"
             shift 2
+            ;;
+        --)
+            shift
+            extra_args=("$@")
+            break
             ;;
         *)
             echo "Error: Unknown option: $1"
@@ -118,7 +124,7 @@ if [ -n "${epochs}" ]; then
     cli_args+=(--epochs "${epochs}")
 fi
 
-biom3_pretrain_stage3 "${cli_args[@]}"
+biom3_pretrain_stage3 "${cli_args[@]}" "${extra_args[@]}"
 
 echo ""
 echo "============================================="

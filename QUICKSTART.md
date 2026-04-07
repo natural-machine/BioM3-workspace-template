@@ -43,7 +43,7 @@ mkdir -p BioM3-ecosystem && cd BioM3-ecosystem
 # Symlink BioM3-data-share to the shared location on your machine
 ln -s /data/data-share/BioM3-data-share BioM3-data-share   # DGX Spark example
 
-# Clone the core library
+# Clone the core BioM3-dev library, if desired. (BioM3-dev can be installed via pip, as well.)
 git clone https://github.com/addison-nm/BioM3-dev.git
 ```
 
@@ -75,7 +75,12 @@ conda create -n biom3-env python=3.12
 conda activate biom3-env
 python -m pip install torch==2.8 torchvision --index-url https://download.pytorch.org/whl/cu129
 python -m pip install -r requirements/<machine>.txt
+
+# Install biom3 via pip
 python -m pip install git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a1
+
+# Install biom3 from source
+# python -m pip install -e '/path/to/BioM3-dev'
 ```
 
 Machine-specific requirements files pin versions tested on each platform:
@@ -108,9 +113,9 @@ source environment.sh
 
 This exports `BIOM3_WORKSPACE_VERSION` and sets machine-specific variables (auto-detected from hostname).
 
-## Set up weights and databases (optional)
+## Set up weights, datasets, and databases (optional)
 
-Pretrained model weights and reference databases can live in a shared [BioM3-data-share](https://github.com/natural-machine/BioM3-data-share) directory. Use the sync scripts to symlink them into your workspace.
+Pretrained model weights, training datasets, and reference databases can live in a shared [BioM3-data-share](https://github.com/natural-machine/BioM3-data-share) directory. Use the sync scripts to symlink that data into your workspace. These script ensure that the `weights/`, `datasets/`,  and `databases/` directories are populated with the shared data, while maintaining your own write privileges in those folders.
 
 ### Shared data paths
 
@@ -132,23 +137,28 @@ Pretrained model weights and reference databases can live in a shared [BioM3-dat
 
 Replace `<weights_source>` with the weights path for your machine from the table above, or a path to your own directory containing weights.
 
-### Sync databases
+### Sync datasets and databases
 
 ```bash
+# Sync datasets
+./scripts/sync_datasets.sh <datasets_source> data/datasets --dry-run
+./scripts/sync_datasets.sh <datasets_source> data/datasets
+
+# Sync databases
 ./scripts/sync_databases.sh <databases_source> data/databases --dry-run
 ./scripts/sync_databases.sh <databases_source> data/databases
 ```
 
-## Prepare your input data
+## Using existing training data
 
-Place input datasets in the `data` directory, for example under `data/datasets/<FamilyName>/`:
+In this context, training data refers specifically to finetuning data. Place existing training datasets in csv format in the `data/datasets/` directory, for example under `data/datasets/<FamilyName>/`:
 
 ```
 data/
   datasets/
-    MyFamily/
-      MyFamily_dataset.csv      # raw finetuning data (Steps 200-300)
-      MyFamily_prompts.csv      # generation prompts (Step 400)
+    FamilyName/
+      FamilyName_dataset.csv      # raw finetuning data (Steps 200-300)
+      FamilyName_prompts.csv      # generation prompts (Step 400)
 ```
 
 ### Required CSV columns
@@ -160,11 +170,11 @@ data/
 | `[final]text_caption` | Text description |
 | `pfam_label` | Pfam family identifier(s) (e.g. `PF00018`) |
 
-The training dataset (`_dataset.csv`) is used in Steps 200-300 to embed sequences and finetune the model. The prompts file (`_prompts.csv`) is used in Step 400 to condition sequence generation — it has the same column format.
+The training dataset is used in Steps 200-300 to embed sequences and finetune the model. The prompts file is used in Step 400 to condition sequence generation — it has the same column format.
 
 ### Example rows
 
-**Note the inclusion of quotes around the text field, to account for commas!**
+**Note the inclusion of quotes around the text field, to account for commas.**
 
 ```csv
 primary_Accession,protein_sequence,[final]text_caption,pfam_label
@@ -172,12 +182,16 @@ P12345,MAEGEITTFTALTEKF...,"SH3 domain of human ABL1 tyrosine kinase",PF00018
 Q67890,MKKYTCTVCGYIYNPE...,"Zinc finger protein involved in transcription regulation",PF00096
 ```
 
+### Generating datasets
+
+Alternatively, the `biom3.dbio` subpackage can be used to generate training datasets from linked database files (see Step 100, below).
+
 ## Configure a pipeline run
 
 Copy the pipeline template and replace the `<FAMILY>` placeholders:
 
 ```bash
-cp configs/pipelines/_template.toml configs/pipelines/MyFamily.toml
+cp configs/pipelines/_template.toml configs/pipelines/myconfig.toml
 ```
 
 Edit the new file to set your family name, paths, and any parameter overrides.
@@ -208,7 +222,7 @@ blast     = "blast-env"       # Step 600
 ```toml
 [paths]
 output_dir  = "outputs/MyFamily"
-input_csv   = "data/MyFamily/MyFamily_dataset.csv"
+training_csv   = "data/MyFamily/MyFamily_dataset.csv"
 prompts_csv = "data/MyFamily/MyFamily_prompts.csv"
 epochs      = 50
 
@@ -216,30 +230,23 @@ epochs      = 50
 # model_weights = "outputs/MyFamily/finetuning/checkpoints/<run_id>/state_dict.best.pth"
 ```
 
-`input_csv` is used by Steps 200-300. `prompts_csv` is used by Step 400. All intermediate paths (HDF5, FASTA, results CSVs) are derived automatically from `output_dir` and the input file prefixes.
+`training_csv` is used by Steps 200-300. `prompts_csv` is used by Step 400. All intermediate paths (HDF5, FASTA, results CSVs) are derived automatically from `output_dir` and the input file prefixes.
 
 #### `[embedding]` — Step 200 options
 
-All optional. Override model weights, configs, batch size, or device for the embedding step:
+All optional. Override shell script defaults via `extra_args` (defaults: pencl_weights, facilitator_weights, pencl_config, facilitator_config, batch_size=32, dataset_key=MMD_data, device=cuda):
 
 ```toml
 [embedding]
-# pencl_weights      = "weights/PenCL/PenCL_V09152023_last.ckpt"
-# facilitator_weights = "weights/Facilitator/Facilitator_MMD15.ckpt/last.ckpt"
-# pencl_config       = "configs/inference/stage1_PenCL.json"
-# facilitator_config = "configs/inference/stage2_Facilitator.json"
-# batch_size         = 32
-# dataset_key        = "MMD_data"
-# device             = "cuda"
-# extra_args         = []      # arbitrary extra --key value pairs passed through
+# extra_args = ["--batch_size", "128", "--device", "cpu"]
 ```
 
 #### `[finetuning]` — Step 300 training config
 
 ```toml
 [finetuning]
-config = "configs/stage3_training/finetune.json"
-# device = "cuda"
+epochs = 100
+extra_args = ["--config", "configs/stage3_training/finetune.json", "--batch_size", "64"]
 ```
 
 The JSON config controls all training hyperparameters: learning rate, batch size, epochs, precision, early stopping, etc. Key parameters in `finetune.json`:
@@ -259,17 +266,18 @@ The JSON config controls all training hyperparameters: learning rate, batch size
 
 ```toml
 [generation]
-unmasking_order = "random"              # random | confidence | confidence_no_pad
-token_strategy  = "sample"              # sample | argmax
-# pencl_weights      = "weights/PenCL/PenCL_V09152023_last.ckpt"
-# facilitator_weights = "weights/Facilitator/Facilitator_MMD15.ckpt/last.ckpt"
-# proteoscribe_config = "configs/inference/stage3_ProteoScribe_sample.json"
-# batch_size         = 256              # embedding batch size
-# device             = "cuda"
-# animate_prompts = [0, 1, 2]           # prompt indices to animate
-# store_probabilities = true            # save per-step probability distributions
-# extra_args         = []               # arbitrary extra --key value pairs passed through
+prompts_csv = "data/MyFamily/MyFamily_prompts.csv"
+# model_weights = "..."     # auto-detected from finetuning output if omitted
+# extra_args = [
+#     "--unmasking_order", "random",
+#     "--token_strategy", "sample",
+#     "--batch_size", "256",
+#     "--animate_prompts", "0", "1", "2",
+#     "--store_probabilities",
+# ]
 ```
+
+Defaults: proteoscribe_config=stage3_ProteoScribe_sample.json, batch_size=256, dataset_key=MMD_data, device=cuda.
 
 The number of replicas per prompt and other model-level sampling parameters are set in `configs/inference/stage3_ProteoScribe_sample.json`.
 
@@ -279,28 +287,20 @@ To run Step 400 with different sampling strategies, use TOML array-of-tables (`[
 
 ```toml
 [[generation]]
-variant         = "random"
-unmasking_order = "random"
-token_strategy  = "sample"
+variant    = "random"
+extra_args = ["--unmasking_order", "random", "--token_strategy", "sample"]
 
 [[generation]]
-variant         = "confidence"
-unmasking_order = "confidence"
-token_strategy  = "argmax"
+variant    = "confidence"
+extra_args = ["--unmasking_order", "confidence", "--token_strategy", "argmax"]
 ```
 
-This produces `generation_random/`, `generation_confidence/`, `samples_random/`, `samples_confidence/`, etc. Steps 500-800 each run once per variant automatically. To collapse fan-out at a specific step, set `fan_out = false` on that step's section:
+This produces `generation_random/`, `generation_confidence/`, `samples_random/`, `samples_confidence/`, etc. Steps 500-800 each run once per variant automatically. If a downstream step also defines `[[variants]]`, the result is a cross-product (e.g., 2 generation variants × 2 BLAST databases = 4 combinations).
 
-```toml
-[blast]
-db       = "swissprot"
-fan_out  = false    # run once with base paths, ignore upstream variants
-```
-
-Target specific variants from the CLI with dot notation:
+Target specific variants from the CLI with dot notation to narrow scope:
 
 ```bash
-python run_pipeline.py configs/pipelines/MyFamily.toml --steps 400.random 500 600
+python run_pipeline.py configs/pipelines/myconfig.toml --steps 400.random 500 600
 ```
 
 Any step that supports a `[section]` in the TOML config can also use `[[section]]` for multi-variant runs (e.g., `[[blast]]` with different databases).
@@ -357,13 +357,13 @@ Run all steps in sequence using `run_pipeline.py`:
 
 ```bash
 source environment.sh
-python run_pipeline.py configs/pipelines/MyFamily.toml
+python run_pipeline.py configs/pipelines/myconfig.toml
 ```
 
 Preview what will run without executing. Dry-run prints each step's script and arguments, then an expected output tree:
 
 ```bash
-python run_pipeline.py configs/pipelines/MyFamily.toml --dry-run
+python run_pipeline.py configs/pipelines/myconfig.toml --dry-run
 ```
 
 The pipeline runner handles conda environment activation for each step automatically.
@@ -373,14 +373,14 @@ The pipeline runner handles conda environment activation for each step automatic
 Steps 100-400 build the dataset, train a family-specific model, and generate sequences:
 
 ```bash
-python run_pipeline.py configs/pipelines/MyFamily.toml --steps 1 2 3 4
+python run_pipeline.py configs/pipelines/myconfig.toml --steps 1 2 3 4
 ```
 
 Or run individual scripts:
 
 ```bash
 # Step 100: Build dataset from reference databases
-./pipeline/0100_build_dataset.sh <databases_dir> outputs/MyFamily/dataset
+./pipeline/0100_build_dataset.sh data/MyFamily/ --pfam-ids PF00018
 
 # Step 200: Embed training data
 ./pipeline/0200_embedding.sh data/MyFamily/MyFamily_dataset.csv outputs/MyFamily/embeddings
@@ -401,7 +401,7 @@ Or run individual scripts:
 Steps 500-800 evaluate the generated sequences. These require FASTA output from Step 400:
 
 ```bash
-python run_pipeline.py configs/pipelines/MyFamily.toml --steps 5 6 6b 7 8
+python run_pipeline.py configs/pipelines/myconfig.toml --steps 5 6 6b 7 8
 ```
 
 Or run individual scripts:
@@ -440,7 +440,7 @@ Run any step directly with its shell script. Each script prints usage and availa
 
 ```bash
 ./pipeline/0200_embedding.sh
-# Usage: ./pipeline/0200_embedding.sh <input_csv> <output_dir> [options]
+# Usage: ./pipeline/0200_embedding.sh <training_csv> <output_dir> [options]
 ```
 
 All scripts accept optional `--key value` flags for overriding defaults (model weights, batch size, device, etc.). Pass `--` to forward additional arguments to the underlying tool.
@@ -450,7 +450,7 @@ All scripts accept optional `--key value` flags for overriding defaults (model w
 Step 900 launches an interactive Streamlit app (not included in the default pipeline order):
 
 ```bash
-python run_pipeline.py configs/pipelines/MyFamily.toml --steps 900
+python run_pipeline.py configs/pipelines/myconfig.toml --steps 900
 # or
 ./pipeline/0900_webapp.sh --port 8501
 ```

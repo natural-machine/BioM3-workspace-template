@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import os
 import shlex
 import subprocess
 import sys
@@ -109,19 +110,30 @@ def get_step_variants(step: str, cfg: dict) -> list[dict]:
     """Return list of variant configs for a step.
 
     Handles both single [section] (dict) and [[section]] (list of dicts).
+    When [[section]] is used, values from [section_defaults] are merged
+    into each variant (variant values take precedence).
     Returns [{}] if the step has no config section.
     """
     section = STEP_SECTIONS.get(step)
     if not section:
         return [{}]
 
+    defaults = cfg.get(f"{section}_defaults", {})
     raw = cfg.get(section)
     if raw is None:
-        return [{}]
+        return [defaults] if defaults else [{}]
     if isinstance(raw, list):
-        return raw
+        merged = []
+        for v in raw:
+            m = {**defaults, **v}
+            default_extra = defaults.get("extra_args", [])
+            variant_extra = v.get("extra_args", [])
+            if default_extra or variant_extra:
+                m["extra_args"] = list(default_extra) + list(variant_extra)
+            merged.append(m)
+        return merged
     if isinstance(raw, dict):
-        return [raw]
+        return [{**defaults, **raw}]
     return [{}]
 
 
@@ -166,9 +178,21 @@ def derive_variant_paths(base_d: dict, step: str, variant_cfg: dict) -> dict:
         vd[dir_key] = f"{base_d['output_dir']}/{subdir_name}_{variant_name}"
 
     # Recompute downstream paths that depend on step-specific dirs
-    if step == "200":
+    if step == "100":
+        # Variant may override training_csv — propagate to downstream paths
+        variant_training = variant_cfg.get("training_csv")
+        if variant_training:
+            vd["training_csv"] = variant_training
+            vd["training_prefix"] = Path(variant_training).stem
+            vd["dataset_dir"] = str(Path(variant_training).parent)
+            vd["hdf5_file"] = (
+                f"{vd['embeddings_dir']}"
+                f"/{vd['training_prefix']}.compiled_emb.hdf5"
+            )
+
+    elif step == "200":
         vd["hdf5_file"] = (
-            f"{vd['embeddings_dir']}/{base_d['input_prefix']}.compiled_emb.hdf5"
+            f"{vd['embeddings_dir']}/{base_d['training_prefix']}.compiled_emb.hdf5"
         )
 
     elif step == "400":
@@ -180,9 +204,10 @@ def derive_variant_paths(base_d: dict, step: str, variant_cfg: dict) -> dict:
         elif variant_name != "default":
             vd["samples_dir"] = f"{base_d['output_dir']}/samples_{variant_name}"
         vd["fasta_file"] = f"{vd['samples_dir']}/all_sequences.fasta"
+        prompts = variant_cfg.get("prompts_csv", "")
+        prompts_prefix = Path(prompts).stem if prompts else "output"
         vd["pt_file"] = (
-            f"{vd['generation_dir']}/"
-            f"{base_d['prompts_prefix']}.ProteoScribe_output.pt"
+            f"{vd['generation_dir']}/{prompts_prefix}.ProteoScribe_output.pt"
         )
 
     elif step in ("600", "610"):
@@ -196,8 +221,8 @@ def derive_variant_paths(base_d: dict, step: str, variant_cfg: dict) -> dict:
         vd["results_csv"] = f"{vd['comparison_dir']}/results.csv"
 
     # Allow explicit path overrides from variant config
-    for key in ("hdf5_file", "fasta_file", "blast_tsv", "reference_dir",
-                "colabfold_csv", "results_csv", "samples_dir",
+    for key in ("training_csv", "hdf5_file", "fasta_file", "blast_tsv",
+                "reference_dir", "colabfold_csv", "results_csv", "samples_dir",
                 "structures_dir", "blast_dir", "comparison_dir", "images_dir"):
         if key in variant_cfg:
             vd[key] = variant_cfg[key]
@@ -207,13 +232,19 @@ def derive_variant_paths(base_d: dict, step: str, variant_cfg: dict) -> dict:
 
 def get_step_outputs(step: str, d: dict) -> list[str]:
     """Return expected output paths for a step, given its resolved paths dict."""
-    prefix = d.get("input_prefix", "")
-    prompts_prefix = d.get("prompts_prefix", "")
+    prefix = d.get("training_prefix", "")
 
     match step:
         case "100":
+            parent = d.get(
+                "dataset_dir", str(Path(d["training_csv"]).parent)
+            )
             return [
-                f"{d['input_csv']}",
+                d["training_csv"],
+                f"{parent}/dataset_annotations.csv",
+                f"{parent}/build_manifest.json",
+                f"{parent}/pfam_ids.csv",
+                f"{parent}/build.log",
             ]
         case "200":
             return [
@@ -229,8 +260,9 @@ def get_step_outputs(step: str, d: dict) -> list[str]:
                 f"{d['finetuning_dir']}/runs/<run_id>/metrics.json",
             ]
         case "400":
+            pt = d.get("pt_file", f"{d['generation_dir']}/<prompts>.ProteoScribe_output.pt")
             return [
-                f"{d['generation_dir']}/{prompts_prefix}.ProteoScribe_output.pt",
+                pt,
                 f"{d['samples_dir']}/all_sequences.fasta",
                 f"{d['samples_dir']}/<prompt_N_samples>.fasta",
             ]
@@ -325,14 +357,19 @@ def derive_paths(cfg: dict) -> dict:
     paths = cfg.get("paths", {})
     outdir = paths["output_dir"]
 
-    # Derive prefix from input_csv (Steps 200-300) or prompts_csv (Steps 400+)
-    input_csv = paths.get("input_csv", "")
-    prompts_csv = paths.get("prompts_csv", "")
-    input_prefix = Path(input_csv).stem if input_csv else ""
-    prompts_prefix = Path(prompts_csv).stem if prompts_csv else ""
+    # Derive prefix from training_csv (Steps 200-300)
+    training_csv = paths.get("training_csv", "")
+    training_prefix = Path(training_csv).stem if training_csv else ""
+
+    # Dataset dir for Step 100 (defaults to parent of training_csv)
+    dataset_dir = paths.get(
+        "dataset_dir",
+        str(Path(training_csv).parent) if training_csv else "",
+    )
 
     d = {
         "output_dir":       outdir,
+        "dataset_dir":      dataset_dir,
         "embeddings_dir":   f"{outdir}/embeddings",
         "finetuning_dir":   f"{outdir}/finetuning",
         "generation_dir":   f"{outdir}/generation",
@@ -341,29 +378,18 @@ def derive_paths(cfg: dict) -> dict:
         "blast_dir":        f"{outdir}/blast",
         "comparison_dir":   f"{outdir}/comparison",
         "images_dir":       f"{outdir}/images",
-        "input_csv":        input_csv,
-        "prompts_csv":      prompts_csv,
-        "input_prefix":     input_prefix,
-        "prompts_prefix":   prompts_prefix,
+        "training_csv":     training_csv,
+        "training_prefix":  training_prefix,
     }
 
     # HDF5 from Step 200
     d["hdf5_file"] = paths.get(
         "hdf5_file",
-        f"{d['embeddings_dir']}/{input_prefix}.compiled_emb.hdf5"
+        f"{d['embeddings_dir']}/{training_prefix}.compiled_emb.hdf5"
     )
 
     # Model weights from Step 300 (auto-detect if not set)
     d["model_weights"] = paths.get("model_weights", "")
-
-    # .pt file from Step 400
-    d["pt_file"] = paths.get(
-        "pt_file",
-        f"{d['generation_dir']}/{prompts_prefix}.ProteoScribe_output.pt"
-    )
-
-    # Epochs (optional override for Step 300)
-    d["epochs"] = paths.get("epochs", "")
 
     # FASTA from Step 400 (--fasta_merge output)
     d["fasta_file"] = f"{d['samples_dir']}/all_sequences.fasta"
@@ -395,11 +421,23 @@ def auto_detect_weights(finetuning_dir: str) -> str:
     return str(candidates[-1]) if candidates else ""
 
 
-def _append_extra_args(args: list[str], variant_cfg: dict) -> list[str]:
-    """Append extra_args passthrough from variant config."""
+def _append_extra_args(
+    args: list[str], variant_cfg: dict, *, separator: bool = True,
+) -> list[str]:
+    """Append extra_args passthrough from variant config.
+
+    Args:
+        separator: If True, insert '--' before extra args (for shell scripts
+            that parse their own flags and use '--' to delimit passthrough).
+            If False, append extra args directly (for shell scripts that
+            forward all args without parsing).
+    """
     extra = variant_cfg.get("extra_args", [])
     if extra:
-        args += ["--"] + [str(x) for x in extra]
+        if separator:
+            args += ["--"] + [str(x) for x in extra]
+        else:
+            args += [str(x) for x in extra]
     return args
 
 
@@ -411,100 +449,69 @@ def build_step_args(
 
     match step:
         case "100":
-            args = [d["input_csv"]]
-            return _append_extra_args(args, vc)
+            # Variant can override training_csv (output path)
+            training_csv = vc.get("training_csv") or d.get("training_csv", "")
+            if not training_csv:
+                sys.exit(
+                    "Error: training_csv is required for Step 100.\n"
+                    "Set training_csv in [paths] or [build_dataset] variant."
+                )
+            outdir = str(Path(training_csv).parent)
+            pfam_ids = vc.get("pfam_ids", [])
+            if not pfam_ids:
+                sys.exit(
+                    "Error: [build_dataset] pfam_ids is required for Step 100.\n"
+                    "Add pfam_ids = [\"PF00018\"] to [build_dataset] in "
+                    "your config."
+                )
+            args = [outdir, "--pfam-ids"] + [str(x) for x in pfam_ids]
+            args += ["--output-filename", Path(training_csv).name]
+            return _append_extra_args(args, vc, separator=False)
 
         case "200":
-            args = [d["input_csv"], d["embeddings_dir"]]
-            for flag in ("pencl_weights", "facilitator_weights",
-                         "pencl_config", "facilitator_config",
-                         "batch_size", "dataset_key", "device"):
-                if vc.get(flag):
-                    args += [f"--{flag}", str(vc[flag])]
+            args = [d["training_csv"], d["embeddings_dir"]]
             return _append_extra_args(args, vc)
 
         case "300":
             args = [d["hdf5_file"], d["finetuning_dir"]]
-            if d["epochs"]:
-                args.append(str(d["epochs"]))
-            if vc.get("config"):
-                args += ["--config", vc["config"]]
-            if vc.get("device"):
-                args += ["--device", str(vc["device"])]
-            return args
+            if vc.get("epochs"):
+                args.append(str(vc["epochs"]))
+            return _append_extra_args(args, vc)
 
         case "400":
-            weights = d["model_weights"]
+            weights = vc.get("model_weights") or d.get("model_weights", "")
             if not weights:
                 weights = auto_detect_weights(d["finetuning_dir"])
             if not weights:
                 sys.exit(
                     "Error: No model_weights specified and none found in "
                     f"{d['finetuning_dir']}/checkpoints/. "
-                    "Set paths.model_weights in the config."
+                    "Set model_weights in [generation] or [paths]."
                 )
-            args = [weights, d["prompts_csv"], d["generation_dir"]]
+            prompts = vc.get("prompts_csv")
+            if not prompts:
+                sys.exit(
+                    "Error: No prompts_csv specified. "
+                    "Set prompts_csv in [generation] or [[generation]] variant."
+                )
+            args = [weights, prompts, d["generation_dir"]]
             # Always produce FASTA output for downstream steps
             args += ["--fasta", "--fasta_merge",
                      "--fasta_dir", d["samples_dir"]]
-            # Model/inference overrides
-            for flag in ("pencl_weights", "facilitator_weights",
-                         "pencl_config", "facilitator_config",
-                         "proteoscribe_config", "batch_size",
-                         "dataset_key", "device"):
-                if vc.get(flag):
-                    args += [f"--{flag}", str(vc[flag])]
-            # Generation-specific options
-            if vc.get("unmasking_order"):
-                args += ["--unmasking_order", vc["unmasking_order"]]
-            if vc.get("token_strategy"):
-                args += ["--token_strategy", vc["token_strategy"]]
-            if vc.get("animate_prompts"):
-                args += ["--animate_prompts"] + [
-                    str(x) for x in vc["animate_prompts"]
-                ]
-            if vc.get("animate_replicas"):
-                args += ["--animate_replicas", str(vc["animate_replicas"])]
-            if vc.get("animation_dir"):
-                args += ["--animation_dir", vc["animation_dir"]]
-            if vc.get("animation_style"):
-                args += ["--animation_style", vc["animation_style"]]
-            if vc.get("animation_metrics"):
-                args += ["--animation_metrics"] + [
-                    str(x) for x in vc["animation_metrics"]
-                ]
-            if vc.get("store_probabilities"):
-                args += ["--store_probabilities"]
-            return _append_extra_args(args, vc)
+            # separator=False: 0400_generate.sh parses all flags and routes
+            # them to the correct sub-command (embedding vs ProteoScribe).
+            return _append_extra_args(args, vc, separator=False)
 
         case "500":
             return [d["samples_dir"], d["structures_dir"]]
 
         case "600":
-            db = vc.get("db", "swissprot")
-            threads = vc.get("threads", 16)
-            args = [d["fasta_file"], d["blast_dir"], "--db", str(db)]
-            if vc.get("remote"):
-                args.append("--remote")
-            elif vc.get("local"):
-                args += ["--local", "--threads", str(threads)]
-            else:
-                args += ["--threads", str(threads)]
-            if vc.get("max_targets"):
-                args += ["--max-targets", str(vc["max_targets"])]
-            return args
+            args = [d["fasta_file"], d["blast_dir"]]
+            return _append_extra_args(args, vc, separator=False)
 
         case "610":
             args = [d["blast_tsv"], d["blast_dir"]]
-            if vc.get("swissprot_dat"):
-                args += ["--swissprot-dat", vc["swissprot_dat"]]
-            if vc.get("no_local_dat"):
-                args.append("--no-local-dat")
-            if vc.get("alphafold_only"):
-                args.append("--alphafold-only")
-            if vc.get("experimental_only"):
-                args.append("--experimental-only")
-            return args
+            return _append_extra_args(args, vc, separator=False)
 
         case "700":
             return [
@@ -610,7 +617,7 @@ def main():
         "--steps", nargs="+", default=None,
         help=(
             "Override which steps to run "
-            "(e.g. --steps 4 5 5b 6 7 or --steps 3.random 3.confidence 4)"
+            "(e.g. --steps 500 600 610 700 800 or --steps 400.random 500)"
         ),
     )
     parser.add_argument(
@@ -626,21 +633,33 @@ def main():
     validate_variants(cfg)
     d = derive_paths(cfg)
 
+    # Export version so pipeline scripts can display it
+    os.environ["BIOM3_WORKSPACE_VERSION"] = get_version()
+
     # Parse step specs (may include variant filters like "3.random")
     if args.steps:
         step_specs = args.steps
     else:
         step_specs = cfg.get("pipeline", {}).get("steps", STEP_ORDER)
 
-    # Normalize and sort by canonical order
+    # Parse step specs and build execution set
     parsed = [parse_step_spec(s) for s in step_specs]
-    base_ids = [step_id for step_id, _ in parsed]
-    ordered = [(s, v) for s, v in parsed if s in STEP_ORDER]
-    ordered.sort(key=lambda sv: STEP_ORDER.index(sv[0]))
-    extras = [(s, v) for s, v in parsed if s not in STEP_ORDER]
-    parsed = ordered + extras
+    exec_set: dict[str, str | None] = {}
+    for step_id, vfilter in parsed:
+        exec_set[step_id] = vfilter
 
-    # Display step summary (show variant filters if any)
+    # Determine the last executed step in canonical order so we know
+    # how far to walk STEP_ORDER for variant expansion
+    last_exec_idx = -1
+    for i, sid in enumerate(STEP_ORDER):
+        if sid in exec_set:
+            last_exec_idx = i
+    walk_steps = STEP_ORDER[: last_exec_idx + 1] if last_exec_idx >= 0 else []
+
+    # Any requested steps not in STEP_ORDER run after the walk
+    extras = [s for s in exec_set if s not in STEP_ORDER]
+
+    # Display step summary
     step_labels = []
     for step_id, vfilter in parsed:
         step_labels.append(f"{step_id}.{vfilter}" if vfilter else step_id)
@@ -655,16 +674,20 @@ def main():
         print(f"  Mode:       DRY RUN")
     print()
 
-    # Track active contexts for fan-out across multi-variant steps.
-    # Each context is (variant_name, paths_dict).
+    # Walk STEP_ORDER up to the last executed step. For every step,
+    # apply variant expansion to build active_contexts. Only actually
+    # run steps that are in the execution set.
     active_contexts: list[tuple[str, dict]] = [("default", d)]
-    all_outputs: list[str] = []  # collect expected outputs for dry-run tree
+    all_outputs: list[str] = []
 
-    for step_id, variant_filter in parsed:
+    for step_id in walk_steps:
+        should_execute = step_id in exec_set
+        variant_filter = exec_set.get(step_id)
+
         variants = get_step_variants(step_id, cfg)
         has_explicit_variants = any(v.get("variant") for v in variants)
 
-        # Apply variant filter if specified (e.g. "3.random")
+        # Apply variant filter if specified
         if variant_filter:
             variants = [
                 v for v in variants if v.get("variant") == variant_filter
@@ -676,44 +699,51 @@ def main():
                 )
 
         if has_explicit_variants:
-            # This step defines its own variants — they become the new
-            # active context set (replacement, not multiplication).
+            # Cross-product: expand each variant × each active context.
             new_contexts = []
-            for vc in variants:
-                vname = vc.get("variant", "default")
-                vd = derive_variant_paths(d, step_id, vc)
-                run_step(step_id, cfg, vd, vc, dry_run=args.dry_run)
-                all_outputs.extend(get_step_outputs(step_id, vd))
-                new_contexts.append((vname, vd))
+            for ctx_name, ctx_paths in active_contexts:
+                for vc in variants:
+                    vname = vc.get("variant", "default")
+                    compound = (
+                        f"{ctx_name}_{vname}"
+                        if ctx_name != "default" else vname
+                    )
+                    compound_vc = {**vc, "variant": compound}
+                    vd = derive_variant_paths(ctx_paths, step_id, compound_vc)
+                    if should_execute:
+                        run_step(step_id, cfg, vd, vc, dry_run=args.dry_run)
+                        all_outputs.extend(get_step_outputs(step_id, vd))
+                    new_contexts.append((compound, vd))
             active_contexts = new_contexts
 
         else:
-            # No explicit variants. Check fan_out toggle.
+            # No explicit variants — inherit: one run per active context.
             single_cfg = variants[0] if variants else {}
-            if single_cfg.get("fan_out") is False:
-                # Collapse: run once with base paths
-                run_step(step_id, cfg, d, single_cfg, dry_run=args.dry_run)
-                all_outputs.extend(get_step_outputs(step_id, d))
-                active_contexts = [("default", d)]
-            else:
-                # Inherit: run once per active context.
-                # Suffix this step's output dir with the context variant
-                # name so that each fan-out variant gets its own directory.
-                new_contexts = []
-                for ctx_name, ctx_paths in active_contexts:
-                    step_paths = ctx_paths
-                    if ctx_name != "default":
-                        inherited_vc = {"variant": ctx_name}
-                        step_paths = derive_variant_paths(
-                            ctx_paths, step_id, inherited_vc,
-                        )
+            new_contexts = []
+            for ctx_name, ctx_paths in active_contexts:
+                step_paths = ctx_paths
+                if ctx_name != "default":
+                    inherited_vc = {"variant": ctx_name}
+                    step_paths = derive_variant_paths(
+                        ctx_paths, step_id, inherited_vc,
+                    )
+                if should_execute:
                     run_step(
                         step_id, cfg, step_paths, single_cfg,
                         dry_run=args.dry_run,
                     )
                     all_outputs.extend(get_step_outputs(step_id, step_paths))
-                    new_contexts.append((ctx_name, step_paths))
-                active_contexts = new_contexts
+                new_contexts.append((ctx_name, step_paths))
+            active_contexts = new_contexts
+
+    # Run any extra steps not in STEP_ORDER
+    for step_id in extras:
+        variant_filter = exec_set.get(step_id)
+        variants = get_step_variants(step_id, cfg)
+        single_cfg = variants[0] if variants else {}
+        for ctx_name, ctx_paths in active_contexts:
+            run_step(step_id, cfg, ctx_paths, single_cfg, dry_run=args.dry_run)
+            all_outputs.extend(get_step_outputs(step_id, ctx_paths))
 
     if args.dry_run:
         print_output_tree(d["output_dir"], all_outputs)

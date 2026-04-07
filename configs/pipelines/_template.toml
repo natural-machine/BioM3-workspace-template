@@ -10,9 +10,9 @@
 # ===========================================================================
 
 # ---------------------------------------------------------------------------
-# [pipeline] — Which steps to run (in order)
+# --- [pipeline] — Which steps to run (in order)
 # ---------------------------------------------------------------------------
-# --- Available steps: 100, 200, 300, 400, 500, 600, 610, 700, 800, 900
+# --- Available steps: 100, 200, 300, 400, 500, 600, 610, 700, 800
 # ---   100 = Build dataset
 # ---   200 = Embedding (PenCL + Facilitator)
 # ---   300 = Finetuning (ProteoScribe)
@@ -22,18 +22,28 @@
 # ---   610 = Fetch reference structures for BLAST hits
 # ---   700 = Structure comparison (TMalign)
 # ---   800 = Plot results
-# ---   900 = Web app (interactive, not in default order)
 # ---
-# --- For a full pipeline run (Steps 100-800):
+# --- For a full pipeline run from generated data: Steps 100-800
+# --- For a full pipeline run from existing data: Steps 200-800
+# --- For analysis only (requires prior Step 400 FASTA output): Steps 500-800
+# ---
+# --- For each pipeline step with name <name>, single configurations use 
+# --- single bracket [<name>]. Multiple configurations use double bracket 
+# --- [[<name>]] to define a variant. Each variant gets its own output 
+# --- directory (auto-derived or explicit). Downstream steps inherit the 
+# --- fan-out automatically. If a downstream step also defines variants, the 
+# --- result is a cross-product. Use e.g. '--steps 400.<variant>' to filter 
+# --- to a single variant. Variant extra_args are concatenated with 
+# --- [<name>_defaults] extra_args.
+# ---
 
 [pipeline]
 steps = [100, 200, 300, 400, 500, 600, 610, 700, 800]
-# For analysis only (requires prior Step 400 FASTA output):
-# steps = [500, 600, 610, 700, 800]
 
 # ---------------------------------------------------------------------------
-# [environments] — Conda environment names for each step group
+# --- [environments] — Conda environment names for each step group
 # ---------------------------------------------------------------------------
+# --- Specify accessible conda or venv environments for different stages
 
 [environments]
 biom3     = "biom3-env"       # Steps 100-400, 700-900
@@ -41,114 +51,120 @@ colabfold = "colabfold"       # Step 500
 blast     = "blast-env"       # Step 600
 
 # ---------------------------------------------------------------------------
-# [paths] — Input/output paths
+# --- [paths] — Input/output paths
 # ---------------------------------------------------------------------------
+# --- output_dir: base path for all outputs
+# --- training_csv: training dataset (Used for finetuning when skipping 
+# ---    dataset creation, otherwise overwritten.)
 
 [paths]
 output_dir  = "outputs/<FAMILY>"
-input_csv   = "data/<FAMILY>/<FAMILY>_dataset.csv"
-prompts_csv = "data/<FAMILY>/<FAMILY>_prompts.csv"
-epochs      = 50
-
-# Uncomment to override auto-detected paths:
-# model_weights = "outputs/<FAMILY>/finetuning/checkpoints/<run_id>/state_dict.best.pth"
-# pt_file       = "outputs/<FAMILY>/generation/<FAMILY>_prompts.ProteoScribe_output.pt"
+training_csv   = "data/<FAMILY>/<FAMILY>_dataset.csv"
 
 # ---------------------------------------------------------------------------
-# [build_dataset] — Step 100 options
+# --- [build_dataset] — Step 100 options
 # ---------------------------------------------------------------------------
-# --- All additional options are passed through to biom3_build_dataset.
+# --- Required: pfam_ids must list one or more Pfam family IDs.
+# --- training_csv overrides [paths].training_csv, specifying the output filename.
+# --- All other flags pass through to biom3_build_dataset via extra_args.
+# --- Run `biom3_build_dataset --help` for the full list.
+# --- Use [[build_dataset]] variants to build multiple datasets and fan out.
+# --- Use [build_dataset_defaults] to specify defaults inherited by all variants.
 
-# [build_dataset]
-# extra_args = []
+[build_dataset]
+pfam_ids = ["<PFAM_ID>"]
+training_csv = "outputs/<FAMILY>/<FAMILY>_dataset.csv"
+extra_args = [
+    "--config",  "configs/dbio_config.json",
+    "--enrich-pfam",
+    "--add-taxonomy",
+    "--annotation-cache",  "data/.cache/trembl_annotations.parquet",
+#    "--taxonomy-filter",  "superkingdom=Bacteria",
+#    "--chunk-size",  "500000",
+]
 
 # ---------------------------------------------------------------------------
-# [embedding] — Step 200 options (all optional, shown with defaults)
+# --- [embedding] — Step 200 options
 # ---------------------------------------------------------------------------
+# --- All flags pass through to biom3_embedding_pipeline via extra_args.
+# --- Run `biom3_embedding_pipeline --help` for the full list.
 
-# [embedding]
-# pencl_weights      = "weights/PenCL/PenCL_V09152023_last.ckpt"
-# facilitator_weights = "weights/Facilitator/Facilitator_MMD15.ckpt/last.ckpt"
-# pencl_config       = "configs/inference/stage1_PenCL.json"
-# facilitator_config = "configs/inference/stage2_Facilitator.json"
-# batch_size         = 32
-# dataset_key        = "MMD_data"
-# device             = "cuda"
-# extra_args         = []      # arbitrary extra --key value pairs passed through
+[embedding]
+extra_args = [
+    "--pencl_weights",          "weights/PenCL/PenCL_V09152023_last.ckpt",
+    "--pencl_config",           "configs/inference/stage1_PenCL.json",
+    "--facilitator_weights",    "weights/Facilitator/Facilitator_MMD15.ckpt/last.ckpt",
+    "--facilitator_config",     "configs/inference/stage2_Facilitator.json",
+    "--batch_size",             "128",
+    "--device",                 "cuda",
+]
 
 # ---------------------------------------------------------------------------
-# [finetuning] — Step 300 options
+# --- [finetuning] — Step 300 options
 # ---------------------------------------------------------------------------
+# --- Requires epochs: number of finetuning epochs.
+# --- All flags pass through to biom3_pretrain_stage3 via extra_args.
+# --- Run `biom3_pretrain_stage3 --help` for the full list.
 
 [finetuning]
-config = "configs/stage3_training/finetune.json"
-# device = "cuda"
+epochs = 100
+extra_args = [
+    "--config",         "configs/stage3_training/finetune.json", 
+    "--batch_size",     "64",
+    "--device",         "cuda",
+]
 
 # ---------------------------------------------------------------------------
-# [generation] — Step 400 options (all optional, defaults come from config JSON)
+# --- [generation] — Step 400 options
 # ---------------------------------------------------------------------------
+# --- Required: prompts_csv (path to CSV with text prompts for generation).
+# --- model_weights is auto-detected from the latest finetuning checkpoint if omitted.
+# --- All other flags pass through to biom3_ProteoScribe_sample via extra_args.
+# --- Run `biom3_ProteoScribe_sample --help` for the full list.
 
-# --- Single configuration (use [generation]):
-
-# [generation]
-# unmasking_order = "random"              # random | confidence | confidence_no_pad
-# token_strategy  = "sample"              # sample | argmax
-# pencl_weights      = "weights/PenCL/PenCL_V09152023_last.ckpt"
-# facilitator_weights = "weights/Facilitator/Facilitator_MMD15.ckpt/last.ckpt"
-# pencl_config       = "configs/inference/stage1_PenCL.json"
-# facilitator_config = "configs/inference/stage2_Facilitator.json"
-# proteoscribe_config = "configs/inference/stage3_ProteoScribe_sample.json"
-# batch_size         = 256
-# dataset_key        = "MMD_data"
-# device             = "cuda"
-# animate_prompts = [0, 1, 2]             # prompt indices to animate, or omit
-# animate_replicas = 1                    # replicas to animate per prompt
-# animation_dir   = "outputs/<FAMILY>/generation/animations"
-# animation_style = "brightness"          # brightness | colorbar | logo
-# animation_metrics = ["confidence"]      # per-position metric boxes
-# store_probabilities = true              # save per-step probability distributions
-# extra_args         = []                 # arbitrary extra --key value pairs passed through
-
-# --- Multiple configurations (use [[generation]]):
-# --- Each variant gets its own output directory (auto-derived or explicit).
-# --- Downstream steps fan out automatically — one run per variant.
-
-# [[generation]]
-# variant         = "random"
-# unmasking_order = "random"
-# token_strategy  = "sample"
-#
-# [[generation]]
-# variant         = "confidence"
-# unmasking_order = "confidence"
-# token_strategy  = "argmax"
+[generation]
+prompts_csv = "data/<FAMILY>/<FAMILY>_prompts.csv"
+# model_weights = "outputs/<FAMILY>/finetuning/checkpoints/<run_id>/state_dict.best.pth"
+extra_args = [
+    "--unmasking_order",    "random",
+    "--token_strategy",     "sample",
+    "--batch_size",         "128",
+    "--animate_prompts",    "0", "1", "2",
+    "--animate_replicas",   "1",
+    "--animation_style",    "gauge",
+    "--animation_metrics",  "confidence",
+    "--store_probabilities",
+]
 
 # ---------------------------------------------------------------------------
-# [blast] — Step 600 options
+# --- [blast] — Step 600 options
 # ---------------------------------------------------------------------------
-# --- Set fan_out = false on any step section to collapse variant fan-out and
-# --- run the step once with base paths instead of once per upstream variant.
+# --- All flags pass through to 0600_blast_search.sh via extra_args.
+# --- Defaults: db=swissprot, threads=16, max-targets=5.
+# --- Remote/local auto-detected from db (path → local, name → remote).
 
 [blast]
-db      = "swissprot"        # swissprot | pdbaa | nr | /path/to/local/db
-threads = 16
-# remote = true              # force remote NCBI search
-# local  = true              # force local search
-# max_targets = 5            # max target sequences per query
-# fan_out = false             # collapse upstream fan-out (run once with base paths)
+extra_args = [
+    "--db", "swissprot",
+    "--threads", "10",
+    "--max-targets", "5",
+]
 
 # ---------------------------------------------------------------------------
-# [fetch_structures] — Step 610 options
+# --- [fetch_structures] — Step 610 options
 # ---------------------------------------------------------------------------
+# --- All flags pass through to 0610_fetch_hit_structures.sh via extra_args.
 
 # [fetch_structures]
-# swissprot_dat = "/path/to/uniprot_sprot.dat.gz"  # local DAT for offline PDB lookup
-# no_local_dat  = true       # skip local DAT auto-detection, use UniProt API
-# alphafold_only = true      # skip experimental PDB, AlphaFold only
-# experimental_only = true   # skip AlphaFold fallback
+# extra_args = [
+#    "--swissprot-dat", "/path/to/uniprot_sprot.dat.gz",
+#    "--no-local-dat",
+#    "--alphafold-only",
+# ]
 
 # ---------------------------------------------------------------------------
-# [webapp] — Step 900 options
+# --- [webapp] — Step 900 options
 # ---------------------------------------------------------------------------
+
 # [webapp]
 # port = 8501

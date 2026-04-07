@@ -50,9 +50,23 @@ For local BLAST searches, symlink reference databases:
 | Polaris (ALCF) | `/grand/NLDesignProtein/sharepoint/BioM3-data-share/databases` |
 | Aurora (ALCF) | `/flare/NLDesignProtein/sharepoint/BioM3-data-share/databases` |
 
+### Build a dataset (optional)
+
+To build a training dataset from reference databases instead of providing your own CSV:
+
+```bash
+./pipeline/0100_build_dataset.sh data/MyFamily/ --pfam-ids PF00018 \
+    --swissprot ../BioM3-data-share/data/datasets/fully_annotated_swiss_prot.csv \
+    --pfam ../BioM3-data-share/data/datasets/Pfam_protein_text_dataset.csv
+```
+
+This extracts sequences matching the Pfam family from SwissProt and Pfam databases, producing a 4-column `dataset.csv`. Database and training data paths are configured in [`configs/dbio_config.json`](configs/dbio_config.json) and can be overridden with CLI flags. Optional flags add UniProt annotation enrichment (`--enrich-pfam`) and NCBI taxonomy lineage (`--add-taxonomy`). For one-time performance optimization (Parquet conversion, annotation caching, taxonomy indexing), see [docs/0100_build_dataset.md](docs/0100_build_dataset.md).
+
 ### Add your data
 
-Place input datasets under `data/<FamilyName>/`. CSVs should contain columns: `protein_sequence`, `primary_Accession`, and a text description column.
+**Option A**: Build from reference databases using Step 100 (see above). Set `training_csv = "data/<FamilyName>/dataset.csv"` in your TOML config (matching `biom3_build_dataset`'s output filename).
+
+**Option B**: Place your own CSV under `data/<FamilyName>/`. CSVs should contain columns: `protein_sequence`, `primary_Accession`, and a text description column.
 
 See [QUICKSTART.md](QUICKSTART.md) for detailed instructions on data format, pipeline configuration, and running the pipeline.
 
