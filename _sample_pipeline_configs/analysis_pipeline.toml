@@ -25,7 +25,7 @@ blast     = "blast-env"       # Step 600
 # ---------------------------------------------------------------------------
 
 [paths]
-output_dir   = "outputs/SH3_mini_demo"
+output_dir   = "outputs/SH3_mini_demo_analysis_pipeline"
 training_csv = "data/datasets/SH3_mini/FINAL_SH3_mini_all_dataset_with_prompts.csv"
 
 # ---------------------------------------------------------------------------

@@ -25,7 +25,7 @@ blast     = "blast-env"       # Step 600
 # ---------------------------------------------------------------------------
 
 [paths]
-output_dir   = "outputs/SH3_mini_demo_build_dataset"
+output_dir   = "outputs/SH3_mini_demo_full_pipeline_dataset_build"
 
 # ---------------------------------------------------------------------------
 # --- [build_dataset] — Step 100 options
@@ -33,7 +33,7 @@ output_dir   = "outputs/SH3_mini_demo_build_dataset"
 
 [build_dataset]
 pfam_ids = ["PF00018"]
-training_csv = "outputs/SH3_mini_demo_build_dataset/built_SH3_dataset.csv"
+training_csv = "outputs/SH3_mini_demo_full_pipeline_dataset_build/built_SH3_dataset.csv"
 extra_args = [
     "--config",  "configs/dbio_config.json",
     "--enrich_pfam",

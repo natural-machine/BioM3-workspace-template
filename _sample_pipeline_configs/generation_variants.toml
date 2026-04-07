@@ -25,7 +25,7 @@ blast     = "blast-env"       # Step 600
 # ---------------------------------------------------------------------------
 
 [paths]
-output_dir   = "outputs/SH3_mini_demo_multi_generation"
+output_dir   = "outputs/SH3_mini_demo_generation_variants"
 training_csv = "data/datasets/SH3_mini/FINAL_SH3_mini_all_dataset_with_prompts.csv"
 
 # ---------------------------------------------------------------------------
@@ -59,7 +59,7 @@ prompts_csv = "data/datasets/SH3_mini/SH3_prompts.csv"
 model_weights = "weights/ProteoScribe/ProteoScribe_SH3_epoch52.ckpt/single_model.pth"
 extra_args = [
     "--batch_size",         "128",
-    "--animate_prompts",    "0 1",
+    "--animate_prompts",    "0",
     "--animate_replicas",   "0",
     "--animation_style",    "gauge",
     "--animation_metrics",  "confidence",
