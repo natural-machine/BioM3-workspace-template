@@ -721,12 +721,13 @@ def main():
             single_cfg = variants[0] if variants else {}
             new_contexts = []
             for ctx_name, ctx_paths in active_contexts:
-                step_paths = ctx_paths
                 if ctx_name != "default":
-                    inherited_vc = {"variant": ctx_name}
-                    step_paths = derive_variant_paths(
-                        ctx_paths, step_id, inherited_vc,
-                    )
+                    vc_for_paths = {**single_cfg, "variant": ctx_name}
+                else:
+                    vc_for_paths = single_cfg
+                step_paths = derive_variant_paths(
+                    ctx_paths, step_id, vc_for_paths,
+                )
                 if should_execute:
                     run_step(
                         step_id, cfg, step_paths, single_cfg,
