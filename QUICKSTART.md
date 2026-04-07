@@ -382,7 +382,7 @@ Or run individual scripts:
 
 ```bash
 # Step 100: Build dataset from reference databases
-./pipeline/0100_build_dataset.sh data/MyFamily/ --pfam-ids PF00018
+./pipeline/0100_build_dataset.sh data/MyFamily/ --pfam_ids PF00018
 
 # Step 200: Embed training data
 ./pipeline/0200_embedding.sh data/MyFamily/MyFamily_dataset.csv outputs/MyFamily/embeddings
