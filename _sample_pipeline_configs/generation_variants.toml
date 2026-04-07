@@ -9,7 +9,7 @@
 # ---------------------------------------------------------------------------
 
 [pipeline]
-steps = [200, 300, 400, 500, 600, 610, 700, 800]
+steps = [400, 500, 600, 610, 700, 800]
 
 # ---------------------------------------------------------------------------
 # --- [environments] — Conda environment names for each step group
@@ -59,8 +59,8 @@ prompts_csv = "data/datasets/SH3_mini/SH3_prompts.csv"
 model_weights = "weights/ProteoScribe/ProteoScribe_SH3_epoch52.ckpt/single_model.pth"
 extra_args = [
     "--batch_size",         "128",
-    "--animate_prompts",    "0",
-    "--animate_replicas",   "0",
+    "--animate_prompts",    "0", "1",
+    "--animate_replicas",   "1",
     "--animation_style",    "gauge",
     "--animation_metrics",  "confidence",
     "--store_probabilities",
