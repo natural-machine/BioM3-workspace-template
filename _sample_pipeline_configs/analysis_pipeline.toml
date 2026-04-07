@@ -9,7 +9,7 @@
 # ---------------------------------------------------------------------------
 
 [pipeline]
-steps = [100, 200, 300, 400, 500, 600, 610, 700, 800]
+steps = [400, 500, 600, 610, 700, 800]  # REMOVED 200, 300
 
 # ---------------------------------------------------------------------------
 # --- [environments] — Conda environment names for each step group
@@ -25,21 +25,8 @@ blast     = "blast-env"       # Step 600
 # ---------------------------------------------------------------------------
 
 [paths]
-output_dir   = "outputs/SH3_mini_demo_build_dataset"
-
-# ---------------------------------------------------------------------------
-# --- [build_dataset] — Step 100 options
-# ---------------------------------------------------------------------------
-
-[build_dataset]
-pfam_ids = ["PF00018"]
-training_csv = "outputs/SH3_mini_demo_build_dataset/built_SH3_dataset.csv"
-extra_args = [
-    "--config",  "configs/dbio_config.json",
-    "--enrich_pfam",
-    "--add_taxonomy",
-    "--uniprot_cache", "data/.uniprot_cache",
-]
+output_dir   = "outputs/SH3_mini_demo"
+training_csv = "data/datasets/SH3_mini/FINAL_SH3_mini_all_dataset_with_prompts.csv"
 
 # ---------------------------------------------------------------------------
 # --- [embedding] — Step 200 options

@@ -60,7 +60,7 @@ To build a training dataset from reference databases instead of providing your o
     --pfam ../BioM3-data-share/data/datasets/Pfam_protein_text_dataset.csv
 ```
 
-This extracts sequences matching the Pfam family from SwissProt and Pfam databases, producing a 4-column `dataset.csv`. Database and training data paths are configured in [`configs/dbio_config.json`](configs/dbio_config.json) and can be overridden with CLI flags. Optional flags add UniProt annotation enrichment (`--enrich-pfam`) and NCBI taxonomy lineage (`--add-taxonomy`). For one-time performance optimization (Parquet conversion, annotation caching, taxonomy indexing), see [docs/0100_build_dataset.md](docs/0100_build_dataset.md).
+This extracts sequences matching the Pfam family from SwissProt and Pfam databases, producing a 4-column `dataset.csv`. Database and training data paths are configured in [`configs/dbio_config.json`](configs/dbio_config.json) and can be overridden with CLI flags. Optional flags add UniProt annotation enrichment (`--enrich-pfam`) and NCBI taxonomy lineage (`--add-taxonomy`). For database syncing and one-time cache setup (Parquet conversion, annotation caching, taxonomy indexing), see [docs/database_setup.md](docs/database_setup.md). For full Step 100 usage, see [docs/0100_build_dataset.md](docs/0100_build_dataset.md).
 
 ### Add your data
 

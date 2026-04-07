@@ -59,7 +59,7 @@ prompts_csv = "data/datasets/SH3_mini/SH3_prompts.csv"
 model_weights = "weights/ProteoScribe/ProteoScribe_SH3_epoch52.ckpt/single_model.pth"
 extra_args = [
     "--batch_size",         "128",
-    "--animate_prompts",    "0",
+    "--animate_prompts",    "0 1",
     "--animate_replicas",   "0",
     "--animation_style",    "gauge",
     "--animation_metrics",  "confidence",
@@ -81,9 +81,9 @@ extra_args = [
 ]
 
 [[generation]]
-variant = "confidence_no_gap-sample"
+variant = "confidence_no_pad-sample"
 extra_args = [
-    "--unmasking_order",    "confidence_no_gap",
+    "--unmasking_order",    "confidence_no_pad",
     "--token_strategy",     "sample",
 ]
 

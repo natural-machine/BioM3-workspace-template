@@ -70,6 +70,10 @@ training_csv   = "data/<FAMILY>/<FAMILY>_dataset.csv"
 # --- Run `biom3_build_dataset --help` for the full list.
 # --- Use [[build_dataset]] variants to build multiple datasets and fan out.
 # --- Use [build_dataset_defaults] to specify defaults inherited by all variants.
+# --- To add taxonomy information, include --add_taxonomy
+# --- To add annotations, include --enrich_pfam
+# --- To speed up repeat builds, specify caches: --uniprot_cache_dir, --annotation_cache.
+# --- See docs/0100_build_dataset.md for more details.
 
 [build_dataset]
 pfam_ids = ["<PFAM_ID>"]
@@ -78,9 +82,10 @@ extra_args = [
     "--config",  "configs/dbio_config.json",
     "--enrich_pfam",
     "--add_taxonomy",
-    "--annotation_cache",  "data/.cache/trembl_annotations.parquet",
-#    "--taxonomy_filter",  "superkingdom=Bacteria",
-#    "--chunk_size",  "500000",
+    "--uniprot_cache_dir", "data/.uniprot_cache",
+    # "--annotation_cache",  "data/.cache/trembl_annotations.parquet",
+    # "--taxonomy_filter",  "superkingdom=Bacteria",
+    # "--chunk_size",  "500000",
 ]
 
 # ---------------------------------------------------------------------------
@@ -88,6 +93,9 @@ extra_args = [
 # ---------------------------------------------------------------------------
 # --- All flags pass through to biom3_embedding_pipeline via extra_args.
 # --- Run `biom3_embedding_pipeline --help` for the full list.
+# --- Input CSV is inherited from [build_dataset].training_csv (or if step 
+# --- 100 is skipped, [paths].training_csv). The pipeline runner passes it 
+# --- to the embedding script automatically — no need to specify it here.
 
 [embedding]
 extra_args = [

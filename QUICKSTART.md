@@ -115,7 +115,9 @@ This exports `BIOM3_WORKSPACE_VERSION` and sets machine-specific variables (auto
 
 ## Set up weights, datasets, and databases (optional)
 
-Pretrained model weights, training datasets, and reference databases can live in a shared [BioM3-data-share](https://github.com/natural-machine/BioM3-data-share) directory. Use the sync scripts to symlink that data into your workspace. These script ensure that the `weights/`, `datasets/`,  and `databases/` directories are populated with the shared data, while maintaining your own write privileges in those folders.
+Pretrained model weights, training datasets, and reference databases can live in a shared [BioM3-data-share](https://github.com/natural-machine/BioM3-data-share) directory. Use the sync scripts to symlink that data into your workspace. These scripts ensure that the `weights/`, `datasets/`,  and `databases/` directories are populated with the shared data, while maintaining your own write privileges in those folders.
+
+For building one-time performance caches (Parquet conversion, annotation caches, taxonomy index), see [docs/database_setup.md](docs/database_setup.md).
 
 ### Shared data paths
 
