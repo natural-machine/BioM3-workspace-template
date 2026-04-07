@@ -60,7 +60,7 @@ model_weights = "weights/ProteoScribe/ProteoScribe_SH3_epoch52.ckpt/single_model
 extra_args = [
     "--batch_size",         "128",
     "--animate_prompts",    "0", "1",
-    "--animate_replicas",   "1",
+    "--animate_replicas",   "2",
     "--animation_style",    "gauge",
     "--animation_metrics",  "confidence",
     "--store_probabilities",

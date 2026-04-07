@@ -62,7 +62,7 @@ extra_args = [
     "--token_strategy",     "sample",
     "--batch_size",         "128",
     "--animate_prompts",    "0", "1",
-    "--animate_replicas",   "1",
+    "--animate_replicas",   "2",
     "--animation_style",    "gauge",
     "--animation_metrics",  "confidence",
     "--store_probabilities",
