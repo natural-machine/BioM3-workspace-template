@@ -77,7 +77,7 @@ python -m pip install torch==2.8 torchvision --index-url https://download.pytorc
 python -m pip install -r requirements/<machine>.txt
 
 # Install biom3 via pip
-python -m pip install git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a1
+python -m pip install git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a2
 
 # Install biom3 from source
 # python -m pip install -e '/path/to/BioM3-dev'
@@ -94,7 +94,7 @@ Machine-specific requirements files pin versions tested on each platform:
 For the web app (Step 900), install with app extras:
 
 ```bash
-python -m pip install "biom3[app] @ git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a1"
+python -m pip install "biom3[app] @ git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a2"
 ```
 
 Steps 500 and 600 require separate environments. Install them according to their respective documentation:
