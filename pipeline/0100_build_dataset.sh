@@ -11,47 +11,47 @@
 # columns required by the downstream embedding pipeline (Step 200).
 #
 # USAGE:
-#   ./pipeline/0100_build_dataset.sh <output_dir> --pfam-ids <id1> [id2...] [options]
+#   ./pipeline/0100_build_dataset.sh <output_dir> --pfam_ids <id1> [id2...] [options]
 #
 # OPTIONS (passed through to biom3_build_dataset):
-#   --pfam-ids ID [ID...]         Pfam family IDs to extract (required)
-#   --output-filename NAME        Output CSV filename (default: dataset.csv)
+#   --pfam_ids ID [ID...]         Pfam family IDs to extract (required)
+#   --output_filename NAME        Output CSV filename (default: dataset.csv)
 #   --swissprot PATH              Path to fully_annotated_swiss_prot.csv
 #   --pfam PATH                   Path to Pfam_protein_text_dataset.csv
-#   --databases-root PATH         Override database root path
+#   --databases_root PATH         Override database root path
 #   --config PATH                 Path to dbio config JSON
-#   --enrich-pfam                 Enrich Pfam captions with UniProt annotations
-#   --annotation-cache PATH...    Pre-built annotation Parquet cache(s) (fastest enrichment)
-#   --uniprot-dat PATH...         Local UniProt .dat.gz file(s) for offline enrichment
-#   --add-taxonomy                Add NCBI taxonomy lineage column
-#   --taxonomy-filter EXPR...     Filter by taxonomy rank (e.g. "superkingdom=Bacteria")
-#   --taxid-index PATH            Pre-built SQLite accession-to-taxid index
-#   --chunk-size N                Chunk size for reading Pfam CSV (default: 500000)
+#   --enrich_pfam                 Enrich Pfam captions with UniProt annotations
+#   --annotation_cache PATH...    Pre-built annotation Parquet cache(s) (fastest enrichment)
+#   --uniprot_dat PATH...         Local UniProt .dat.gz file(s) for offline enrichment
+#   --add_taxonomy                Add NCBI taxonomy lineage column
+#   --taxonomy_filter EXPR...     Filter by taxonomy rank (e.g. "superkingdom=Bacteria")
+#   --taxid_index PATH            Pre-built SQLite accession-to-taxid index
+#   --chunk_size N                Chunk size for reading Pfam CSV (default: 500000)
 #
 # EXAMPLE (basic — paths from biom3 config):
-#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam-ids PF00018
+#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam_ids PF00018
 #
 # EXAMPLE (explicit database paths from BioM3-data-share):
-#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam-ids PF00018 \
+#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam_ids PF00018 \
 #       --swissprot ../BioM3-data-share/data/datasets/fully_annotated_swiss_prot.csv \
 #       --pfam ../BioM3-data-share/data/datasets/Pfam_protein_text_dataset.csv
 #
 # EXAMPLE (enriched captions from local .dat files):
-#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam-ids PF00018 \
-#       --enrich-pfam \
-#       --uniprot-dat ../BioM3-data-share/databases/swissprot/uniprot_sprot.dat.gz \
+#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam_ids PF00018 \
+#       --enrich_pfam \
+#       --uniprot_dat ../BioM3-data-share/databases/swissprot/uniprot_sprot.dat.gz \
 #                     ../BioM3-data-share/databases/trembl/uniprot_trembl.dat.gz
 #
 # EXAMPLE (enriched captions from pre-built annotation cache — fastest):
-#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam-ids PF00018 \
-#       --enrich-pfam \
-#       --annotation-cache data/databases/trembl/trembl_annotations.parquet
+#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam_ids PF00018 \
+#       --enrich_pfam \
+#       --annotation_cache data/databases/trembl/trembl_annotations.parquet
 #
 # EXAMPLE (enrichment + taxonomy filtering):
-#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam-ids PF00018 \
-#       --enrich-pfam --add-taxonomy \
-#       --taxonomy-filter "superkingdom=Bacteria" \
-#       --taxid-index data/databases/ncbi_taxonomy/accession2taxid.sqlite
+#   ./pipeline/0100_build_dataset.sh data/SH3/ --pfam_ids PF00018 \
+#       --enrich_pfam --add_taxonomy \
+#       --taxonomy_filter "superkingdom=Bacteria" \
+#       --taxid_index data/databases/ncbi_taxonomy/accession2taxid.sqlite
 #
 # INPUT:
 #   Two training CSVs (resolved from biom3 config or passed explicitly):
@@ -70,26 +70,26 @@ set -euo pipefail
 
 # --- Validate positional args ---
 if [ "$#" -lt 1 ]; then
-    echo "Usage: $0 <output_dir> --pfam-ids <id1> [id2...] [options]"
+    echo "Usage: $0 <output_dir> --pfam_ids <id1> [id2...] [options]"
     echo ""
     echo "Constructs a finetuning dataset CSV from SwissProt and Pfam databases."
     echo ""
     echo "Options (passed through to biom3_build_dataset):"
-    echo "  --pfam-ids ID [ID...]         Pfam family IDs to extract (required)"
+    echo "  --pfam_ids ID [ID...]         Pfam family IDs to extract (required)"
     echo "  --swissprot PATH              Path to fully_annotated_swiss_prot.csv"
     echo "  --pfam PATH                   Path to Pfam_protein_text_dataset.csv"
-    echo "  --databases-root PATH         Override database root path"
-    echo "  --enrich-pfam                 Enrich captions with UniProt annotations"
-    echo "  --annotation-cache PATH...    Pre-built annotation Parquet cache(s)"
-    echo "  --uniprot-dat PATH...         Local UniProt .dat.gz file(s)"
-    echo "  --add-taxonomy                Add NCBI taxonomy lineage"
-    echo "  --taxonomy-filter EXPR...     Filter by rank (e.g. \"superkingdom=Bacteria\")"
-    echo "  --taxid-index PATH            Pre-built SQLite accession-to-taxid index"
-    echo "  --chunk-size N                Chunk size for Pfam CSV (default: 500000)"
+    echo "  --databases_root PATH         Override database root path"
+    echo "  --enrich_pfam                 Enrich captions with UniProt annotations"
+    echo "  --annotation_cache PATH...    Pre-built annotation Parquet cache(s)"
+    echo "  --uniprot_dat PATH...         Local UniProt .dat.gz file(s)"
+    echo "  --add_taxonomy                Add NCBI taxonomy lineage"
+    echo "  --taxonomy_filter EXPR...     Filter by rank (e.g. \"superkingdom=Bacteria\")"
+    echo "  --taxid_index PATH            Pre-built SQLite accession-to-taxid index"
+    echo "  --chunk_size N                Chunk size for Pfam CSV (default: 500000)"
     echo ""
     echo "Example:"
-    echo "  $0 data/SH3/ --pfam-ids PF00018"
-    echo "  $0 data/SH3/ --pfam-ids PF00018 --enrich-pfam --annotation-cache cache.parquet"
+    echo "  $0 data/SH3/ --pfam_ids PF00018"
+    echo "  $0 data/SH3/ --pfam_ids PF00018 --enrich_pfam --annotation_cache cache.parquet"
     exit 1
 fi
 
