@@ -11,6 +11,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import shlex
 import subprocess
@@ -305,10 +306,14 @@ def get_step_outputs(step: str, d: dict) -> list[str]:
             if not cfg_path:
                 return []
             try:
-                with open(cfg_path, "rb") as f:
-                    export_cfg = tomllib.load(f)
-                return [e["dst"] for e in export_cfg.get("entry", []) if "dst" in e]
-            except (OSError, tomllib.TOMLDecodeError):
+                with open(cfg_path) as f:
+                    export_cfg = json.load(f)
+                return [
+                    e["dst"]
+                    for e in export_cfg.get("entries", [])
+                    if isinstance(e, dict) and "dst" in e
+                ]
+            except (OSError, json.JSONDecodeError):
                 return []
         case _:
             return []
@@ -551,9 +556,11 @@ def build_step_args(
             return args
 
         case "9000":
-            raw_path = vc.get("config", "export.config")
-            config_dir = Path(d.get("config_dir", "."))
-            export_config_path = (config_dir / raw_path).resolve()
+            raw_path = Path(vc.get("config", "configs/export.json"))
+            export_config_path = (
+                raw_path if raw_path.is_absolute()
+                else (SCRIPT_DIR / raw_path).resolve()
+            )
             # Stash for get_step_outputs() so the dry-run tree can list dst paths
             d["export_config_path"] = str(export_config_path)
             args = [str(export_config_path), d["output_dir"]]
@@ -657,7 +664,6 @@ def main():
     cfg = load_config(args.config)
     validate_variants(cfg)
     d = derive_paths(cfg)
-    d["config_dir"] = str(args.config.resolve().parent)
 
     # Export version so pipeline scripts can display it
     os.environ["BIOM3_WORKSPACE_VERSION"] = get_version()

@@ -338,7 +338,7 @@ threads = 16
 
 ```toml
 # [export]
-# config = "export.config"
+# config = "configs/export.json"
 ```
 
 ## Pipeline overview
@@ -357,7 +357,7 @@ Broadly, the BioM3 pipeline has two phases: an **initial phase** (Steps 100-400)
 | 700 | Compare structures | Structural alignment of generated vs. reference structures with TMalign | ColabFold CSV + BLAST TSV + PDBs | `results.csv` (TM-score, RMSD, seq ID) | biom3-env |
 | 800 | Plot results | Generate strip plots for TM-score, RMSD, sequence identity, pLDDT | Comparison CSV | PNG plots | biom3-env |
 | 900 | Web app | Interactive Streamlit app for browsing structures, alignments, and BLAST | Pipeline outputs | HTTP server (localhost) | biom3-env |
-| 9000 | Export | Copy or symlink selected outputs to user-specified destinations (lab share, etc.) | `outputs/<FAMILY>/` + `export.config` | Files / symlinks at user-specified `dst` paths | biom3-env |
+| 9000 | Export | Copy or symlink selected outputs to user-specified destinations (lab share, etc.) | `outputs/<FAMILY>/` + `configs/export.json` | Files / symlinks at user-specified `dst` paths | biom3-env |
 
 ## Run the pipeline
 

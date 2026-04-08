@@ -53,7 +53,7 @@ python run_pipeline.py configs/pipelines/<family>.toml   # full pipeline
 ./pipeline/0200_embedding.sh                              # individual step
 ```
 
-Steps 5-6 require separate conda environments (colabfold, blast-env). The pipeline runner handles environment activation. Step 9000 (export) is optional and runs after the main pipeline; it ships selected outputs to user-specified destinations via an `export.config` TOML file.
+Steps 5-6 require separate conda environments (colabfold, blast-env). The pipeline runner handles environment activation. Step 9000 (export) is optional and runs after the main pipeline; it ships selected outputs to user-specified destinations via [configs/export.json](configs/export.json).
 
 Weights and databases are symlinked from BioM3-data-share. See README.md for per-machine paths and sync instructions.
 

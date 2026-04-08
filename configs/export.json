@@ -1,0 +1,15 @@
+{
+    "_comment": "Export config for pipeline step 9000. Edit the entries below or add new ones. Each entry has src (relative to outputs/<FAMILY>/), dst (absolute path or relative to cwd), and mode ('copy' or 'symlink', default 'symlink'). Step 9000 is opt-in: add 9000 to [pipeline].steps in your pipeline TOML or invoke with --steps 9000. The _comment field is ignored by the parser.",
+    "entries": [
+        {
+            "src": "samples/all_sequences.fasta",
+            "dst": "/REPLACE_ME/path/to/destination/all_sequences.fasta",
+            "mode": "copy"
+        },
+        {
+            "src": "images",
+            "dst": "/REPLACE_ME/path/to/destination/images",
+            "mode": "symlink"
+        }
+    ]
+}

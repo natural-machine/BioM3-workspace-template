@@ -1,22 +1,30 @@
 #!/usr/bin/env python
 """Export selected pipeline outputs to user-specified destinations.
 
-Driven by an export.config TOML file with [[entry]] blocks. Each entry
-copies or symlinks a path from <outputs_dir> to a destination path.
-Idempotent (re-running with no changes reports "already in sync") and
-non-destructive on the source.
+Driven by a JSON config (default: configs/export.json) with an "entries"
+array. Each entry copies or symlinks a path from <outputs_dir> to a
+destination path. Idempotent (re-running with no changes reports
+"already in sync") and non-destructive on the source.
+
+Schema:
+    {
+      "entries": [
+        {"src": "samples/all_sequences.fasta", "dst": "/abs/path", "mode": "copy"},
+        {"src": "images", "dst": "/abs/path", "mode": "symlink"}
+      ]
+    }
 
 Usage:
-    python scripts/export_outputs.py <export_config> <outputs_dir>
-    python scripts/export_outputs.py <export_config> <outputs_dir> --dry-run
-    python scripts/export_outputs.py <export_config> <outputs_dir> --skip-missing
+    python scripts/export_outputs.py <export_json> <outputs_dir>
+    python scripts/export_outputs.py <export_json> <outputs_dir> --dry-run
+    python scripts/export_outputs.py <export_json> <outputs_dir> --skip-missing
 """
 
 import argparse
 import hashlib
+import json
 import shutil
 import sys
-import tomllib
 from pathlib import Path
 
 PROGRESS = "[step 9000 export]"
@@ -54,14 +62,23 @@ def compute_hash(path: Path) -> str:
 
 
 def load_entries(config_path: Path) -> list[dict]:
-    with open(config_path, "rb") as f:
-        cfg = tomllib.load(f)
-    entries = cfg.get("entry", [])
+    with open(config_path) as f:
+        try:
+            cfg = json.load(f)
+        except json.JSONDecodeError as exc:
+            sys.exit(f"{PROGRESS} ERROR: invalid JSON in {config_path}: {exc}")
+    if not isinstance(cfg, dict):
+        sys.exit(
+            f"{PROGRESS} ERROR: top-level JSON must be an object in {config_path}"
+        )
+    entries = cfg.get("entries", [])
     if not isinstance(entries, list):
         sys.exit(
-            f"{PROGRESS} ERROR: [[entry]] must be a list in {config_path}"
+            f'{PROGRESS} ERROR: "entries" must be an array in {config_path}'
         )
     for e in entries:
+        if not isinstance(e, dict):
+            sys.exit(f"{PROGRESS} ERROR: entry must be an object: {e}")
         if "src" not in e or "dst" not in e:
             sys.exit(f"{PROGRESS} ERROR: entry missing src or dst: {e}")
         e.setdefault("mode", "symlink")
@@ -145,7 +162,7 @@ def parse_args(argv):
     )
     parser.add_argument(
         "export_config", type=Path,
-        help="Path to export.config TOML file with [[entry]] blocks",
+        help='Path to export JSON file with an "entries" array',
     )
     parser.add_argument(
         "outputs_dir", type=Path,

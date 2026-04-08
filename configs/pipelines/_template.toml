@@ -193,13 +193,14 @@ extra_args = [
 # ---------------------------------------------------------------------------
 # --- [export] — Step 9000 options
 # ---------------------------------------------------------------------------
-# --- Path to an export.config file (TOML, [[entry]] blocks of src/dst/mode).
-# --- Resolved relative to this pipeline config file's directory.
+# --- Path to a JSON config with an "entries" array of {src, dst, mode}.
+# --- Default: configs/export.json (relative to the workspace root).
+# --- Override with an absolute path or a path relative to the workspace root.
 # --- Step 9000 is NOT in [pipeline].steps by default — add 9000 to the list
 # --- above to run it, or invoke explicitly via --steps 9000.
 
 # [export]
-# config = "export.config"
+# config = "configs/export.json"
 # extra_args = [
 #     # "--dry-run",
 #     # "--skip-missing",
