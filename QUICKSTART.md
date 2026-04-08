@@ -334,9 +334,16 @@ threads = 16
 # port = 8501
 ```
 
+#### `[export]` — Step 9000 options
+
+```toml
+# [export]
+# config = "export.config"
+```
+
 ## Pipeline overview
 
-Broadly, the BioM3 pipeline has two phases: an **initial phase** (Steps 100-400) that builds the dataset, embeds, finetunes, and generates sequences, and an **analysis phase** (Steps 500-800) that predicts structures and evaluates results.
+Broadly, the BioM3 pipeline has two phases: an **initial phase** (Steps 100-400) that builds the dataset, embeds, finetunes, and generates sequences, and an **analysis phase** (Steps 500-800) that predicts structures and evaluates results. Two optional post-pipeline steps are available: Step 900 (interactive web app) and Step 9000 (export selected outputs to a user-specified location).
 
 | Step | Name | Description | Input | Output | Env |
 |------|------|-------------|-------|--------|-----|
@@ -350,6 +357,7 @@ Broadly, the BioM3 pipeline has two phases: an **initial phase** (Steps 100-400)
 | 700 | Compare structures | Structural alignment of generated vs. reference structures with TMalign | ColabFold CSV + BLAST TSV + PDBs | `results.csv` (TM-score, RMSD, seq ID) | biom3-env |
 | 800 | Plot results | Generate strip plots for TM-score, RMSD, sequence identity, pLDDT | Comparison CSV | PNG plots | biom3-env |
 | 900 | Web app | Interactive Streamlit app for browsing structures, alignments, and BLAST | Pipeline outputs | HTTP server (localhost) | biom3-env |
+| 9000 | Export | Copy or symlink selected outputs to user-specified destinations (lab share, etc.) | `outputs/<FAMILY>/` + `export.config` | Files / symlinks at user-specified `dst` paths | biom3-env |
 
 ## Run the pipeline
 

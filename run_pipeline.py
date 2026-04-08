@@ -28,61 +28,67 @@ def get_version() -> str:
 # Step ID → (script path, environment key from [environments])
 # Environment key of None means no activation needed.
 STEPS = {
-    "100": ("pipeline/0100_build_dataset.sh",       "biom3"),
-    "200": ("pipeline/0200_embedding.sh",           "biom3"),
-    "300": ("pipeline/0300_finetune.sh",             "biom3"),
-    "400": ("pipeline/0400_generate.sh",             "biom3"),
-    "500": ("pipeline/0500_colabfold.sh",            "colabfold"),
-    "600": ("pipeline/0600_blast_search.sh",         "blast"),
-    "610": ("pipeline/0610_fetch_hit_structures.sh", None),
-    "700": ("pipeline/0700_compare_structures.sh",   "biom3"),
-    "800": ("pipeline/0800_plot_results.sh",          "biom3"),
-    "900": ("pipeline/0900_webapp.sh",               "biom3"),
+    "100":  ("pipeline/0100_build_dataset.sh",       "biom3"),
+    "200":  ("pipeline/0200_embedding.sh",           "biom3"),
+    "300":  ("pipeline/0300_finetune.sh",             "biom3"),
+    "400":  ("pipeline/0400_generate.sh",             "biom3"),
+    "500":  ("pipeline/0500_colabfold.sh",            "colabfold"),
+    "600":  ("pipeline/0600_blast_search.sh",         "blast"),
+    "610":  ("pipeline/0610_fetch_hit_structures.sh", None),
+    "700":  ("pipeline/0700_compare_structures.sh",   "biom3"),
+    "800":  ("pipeline/0800_plot_results.sh",          "biom3"),
+    "900":  ("pipeline/0900_webapp.sh",               "biom3"),
+    "9000": ("pipeline/9000_export.sh",               "biom3"),
 }
 
 # Step 900 (webapp) is interactive/blocking — excluded from default order.
 # Use --steps 900 to launch it explicitly.
+# Step 9000 (export) is opt-in — add 9000 to [pipeline].steps to run it,
+# or use --steps 9000 to launch it explicitly.
 STEP_ORDER = ["100", "200", "300", "400", "500", "600", "610", "700", "800"]
 
 STEP_NAMES = {
-    "100": "Build Dataset",
-    "200": "Embedding",
-    "300": "Finetuning",
-    "400": "Generation",
-    "500": "ColabFold Structure Prediction",
-    "600": "BLAST Search",
-    "610": "Fetch Reference Structures",
-    "700": "Structure Comparison (TMalign)",
-    "800": "Plot Results",
-    "900": "Web App",
+    "100":  "Build Dataset",
+    "200":  "Embedding",
+    "300":  "Finetuning",
+    "400":  "Generation",
+    "500":  "ColabFold Structure Prediction",
+    "600":  "BLAST Search",
+    "610":  "Fetch Reference Structures",
+    "700":  "Structure Comparison (TMalign)",
+    "800":  "Plot Results",
+    "900":  "Web App",
+    "9000": "Export Pipeline Outputs",
 }
 
 # Step ID → TOML section name for step-specific config
 STEP_SECTIONS = {
-    "100": "build_dataset",
-    "200": "embedding",
-    "300": "finetuning",
-    "400": "generation",
-    "500": "colabfold",
-    "600": "blast",
-    "610": "fetch_structures",
-    "700": "comparison",
-    "800": "plotting",
-    "900": "webapp",
+    "100":  "build_dataset",
+    "200":  "embedding",
+    "300":  "finetuning",
+    "400":  "generation",
+    "500":  "colabfold",
+    "600":  "blast",
+    "610":  "fetch_structures",
+    "700":  "comparison",
+    "800":  "plotting",
+    "900":  "webapp",
+    "9000": "export",
 }
 
 # Step ID → (subdir name, paths dict key) for variant output dirs
 STEP_SUBDIRS = {
-    "100": ("dataset",     "dataset_dir"),
-    "200": ("embeddings",  "embeddings_dir"),
-    "300": ("finetuning",  "finetuning_dir"),
-    "400": ("generation",  "generation_dir"),
-    "500": ("structures",  "structures_dir"),
-    "600": ("blast",       "blast_dir"),
-    "610": ("blast",       "blast_dir"),
-    "700": ("comparison",  "comparison_dir"),
-    "800": ("images",      "images_dir"),
-    "900": (None,          None),
+    "100":  ("dataset",     "dataset_dir"),
+    "200":  ("embeddings",  "embeddings_dir"),
+    "300":  ("finetuning",  "finetuning_dir"),
+    "400":  ("generation",  "generation_dir"),
+    "500":  ("structures",  "structures_dir"),
+    "600":  ("blast",       "blast_dir"),
+    "610":  ("blast",       "blast_dir"),
+    "700":  ("comparison",  "comparison_dir"),
+    "800":  ("images",      "images_dir"),
+    "900":  (None,          None),
+    "9000": (None,          None),
 }
 
 
@@ -294,6 +300,16 @@ def get_step_outputs(step: str, d: dict) -> list[str]:
             ]
         case "900":
             return []
+        case "9000":
+            cfg_path = d.get("export_config_path")
+            if not cfg_path:
+                return []
+            try:
+                with open(cfg_path, "rb") as f:
+                    export_cfg = tomllib.load(f)
+                return [e["dst"] for e in export_cfg.get("entry", []) if "dst" in e]
+            except (OSError, tomllib.TOMLDecodeError):
+                return []
         case _:
             return []
 
@@ -534,6 +550,15 @@ def build_step_args(
                 args += ["--port", str(vc["port"])]
             return args
 
+        case "9000":
+            raw_path = vc.get("config", "export.config")
+            config_dir = Path(d.get("config_dir", "."))
+            export_config_path = (config_dir / raw_path).resolve()
+            # Stash for get_step_outputs() so the dry-run tree can list dst paths
+            d["export_config_path"] = str(export_config_path)
+            args = [str(export_config_path), d["output_dir"]]
+            return _append_extra_args(args, vc, separator=False)
+
         case _:
             sys.exit(f"Error: unknown step {step}")
 
@@ -632,6 +657,7 @@ def main():
     cfg = load_config(args.config)
     validate_variants(cfg)
     d = derive_paths(cfg)
+    d["config_dir"] = str(args.config.resolve().parent)
 
     # Export version so pipeline scripts can display it
     os.environ["BIOM3_WORKSPACE_VERSION"] = get_version()

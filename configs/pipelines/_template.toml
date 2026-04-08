@@ -12,16 +12,17 @@
 # ---------------------------------------------------------------------------
 # --- [pipeline] — Which steps to run (in order)
 # ---------------------------------------------------------------------------
-# --- Available steps: 100, 200, 300, 400, 500, 600, 610, 700, 800
-# ---   100 = Build dataset
-# ---   200 = Embedding (PenCL + Facilitator)
-# ---   300 = Finetuning (ProteoScribe)
-# ---   400 = Generation (sequence sampling + FASTA)
-# ---   500 = Structure prediction (ColabFold)
-# ---   600 = BLAST homology search
-# ---   610 = Fetch reference structures for BLAST hits
-# ---   700 = Structure comparison (TMalign)
-# ---   800 = Plot results
+# --- Available steps: 100, 200, 300, 400, 500, 600, 610, 700, 800, 9000
+# ---   100  = Build dataset
+# ---   200  = Embedding (PenCL + Facilitator)
+# ---   300  = Finetuning (ProteoScribe)
+# ---   400  = Generation (sequence sampling + FASTA)
+# ---   500  = Structure prediction (ColabFold)
+# ---   600  = BLAST homology search
+# ---   610  = Fetch reference structures for BLAST hits
+# ---   700  = Structure comparison (TMalign)
+# ---   800  = Plot results
+# ---   9000 = Export results (optional, runs after the main pipeline)
 # ---
 # --- For a full pipeline run from generated data: Steps 100-800
 # --- For a full pipeline run from existing data: Steps 200-800
@@ -46,7 +47,7 @@ steps = [100, 200, 300, 400, 500, 600, 610, 700, 800]
 # --- Specify accessible conda or venv environments for different stages
 
 [environments]
-biom3     = "biom3-env"       # Steps 100-400, 700-900
+biom3     = "biom3-env"       # Steps 100-400, 700-900, 9000
 colabfold = "colabfold"       # Step 500
 blast     = "blast-env"       # Step 600
 
@@ -188,3 +189,18 @@ extra_args = [
 
 # [webapp]
 # port = 8501
+
+# ---------------------------------------------------------------------------
+# --- [export] — Step 9000 options
+# ---------------------------------------------------------------------------
+# --- Path to an export.config file (TOML, [[entry]] blocks of src/dst/mode).
+# --- Resolved relative to this pipeline config file's directory.
+# --- Step 9000 is NOT in [pipeline].steps by default — add 9000 to the list
+# --- above to run it, or invoke explicitly via --steps 9000.
+
+# [export]
+# config = "export.config"
+# extra_args = [
+#     # "--dry-run",
+#     # "--skip-missing",
+# ]
