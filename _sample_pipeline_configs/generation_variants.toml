@@ -99,3 +99,15 @@ extra_args = ["--db", "swissprot", "--threads", "8"]
 # ---------------------------------------------------------------------------
 
 # Uses defaults (UniProt API lookup, AlphaFold fallback)
+
+# ---------------------------------------------------------------------------
+# --- [comparison] — Step 700 options
+# ---------------------------------------------------------------------------
+
+# Uses defaults (TMalign on PATH; no configurable options)
+
+# ---------------------------------------------------------------------------
+# --- [plotting] — Step 800 options
+# ---------------------------------------------------------------------------
+
+# Uses defaults (auto-includes --colabfold-csv when Step 500 ran)
