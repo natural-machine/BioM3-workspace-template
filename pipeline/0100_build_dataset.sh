@@ -100,7 +100,7 @@ shift
 if ! command -v biom3_build_dataset &> /dev/null; then
     echo "Error: biom3_build_dataset not found on PATH."
     echo "Ensure biom3 is installed:"
-    echo "  pip install git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a2"
+    echo "  pip install -r requirements/biom3.txt"
     exit 1
 fi
 

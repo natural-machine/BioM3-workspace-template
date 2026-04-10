@@ -1,0 +1,8 @@
+# BioM3-dev pin for this workspace-template release.
+# Single source of truth for which BioM3-dev version this workspace was tested against.
+# History of past pin points is in SYNC_LOG.md.
+#
+# Install with:
+#   pip install -r requirements/biom3.txt
+
+biom3[app] @ git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a3

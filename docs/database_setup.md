@@ -4,7 +4,7 @@ Step 100 (`biom3_build_dataset`) queries large protein databases that benefit fr
 
 ## Prerequisites
 
-- BioM3-dev installed (`pip install git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a2`)
+- BioM3-dev installed (`pip install -r requirements/biom3.txt`)
 - Access to BioM3-data-share on your machine
 - Environment sourced (`source environment.sh`)
 

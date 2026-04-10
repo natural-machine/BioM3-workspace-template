@@ -76,10 +76,11 @@ conda activate biom3-env
 python -m pip install torch==2.8 torchvision --index-url https://download.pytorch.org/whl/cu129
 python -m pip install -r requirements/<machine>.txt
 
-# Install biom3 via pip
-python -m pip install git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a2
+# Install pinned biom3 (see SYNC_LOG.md for the version this workspace was tested against)
+python -m pip install -r requirements/biom3.txt
 
-# Install biom3 from source
+# Or install biom3 directly from a git ref
+# python -m pip install git+https://github.com/addison-nm/BioM3-dev.git
 # python -m pip install -e '/path/to/BioM3-dev'
 ```
 
@@ -91,11 +92,7 @@ Machine-specific requirements files pin versions tested on each platform:
 | `requirements/polaris.txt` | Polaris (ALCF) |
 | `requirements/aurora.txt` | Aurora (ALCF) |
 
-For the web app (Step 900), install with app extras:
-
-```bash
-python -m pip install "biom3[app] @ git+https://github.com/addison-nm/BioM3-dev.git@v0.1.0a2"
-```
+The pinned `requirements/biom3.txt` already includes the `[app]` extras needed for the web app (Step 900), so no separate install is required.
 
 Steps 500 and 600 require separate environments. Install them according to their respective documentation:
 

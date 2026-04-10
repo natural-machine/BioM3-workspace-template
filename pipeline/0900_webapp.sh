@@ -20,7 +20,7 @@
 #   ./pipeline/0900_webapp.sh --port 8502
 #
 # REQUIRES:
-#   - BioM3-dev installed with app extras: pip install "biom3[app]"
+#   - BioM3-dev installed with app extras: pip install -r requirements/biom3.txt
 #   - Pipeline outputs in outputs/ (from Steps 1-7)
 #=============================================================================
 
